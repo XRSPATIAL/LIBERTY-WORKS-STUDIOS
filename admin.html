@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LW. Admin — Panel de Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #c5a059;
+  --gold-bright: #f0d78c;
+  --gold-deep: #846a32;
+  --white: #f5f3ee;
+  --silver: #d1d1d1;
+  --smoke: #7a7a7a;
+  --black: #080808;
+  --surface: #0f0e0a;
+  --surface2: #161410;
+  --surface3: #1e1b15;
+  --border: rgba(197,160,89,0.15);
+  --border-strong: rgba(197,160,89,0.3);
+  --red: #c0392b;
+  --green: #27ae60;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--black);color:var(--white);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden;}
+
+/* LOGIN */
+#login-screen{
+  position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(140deg,#0a0907 0%,#15120c 50%,#040404 100%);
+  display:flex;flex-direction:column;justify-content:center;align-items:center;gap:40px;
+}
+.login-logo{font-family:'Bebas Neue',sans-serif;font-size:3rem;letter-spacing:0.15em;color:var(--white);}
+.login-logo span{color:transparent;-webkit-text-stroke:1px var(--gold);}
+.login-sub{font-size:0.42rem;color:var(--smoke);letter-spacing:0.35em;text-transform:uppercase;margin-top:-28px;}
+.login-form{display:flex;flex-direction:column;gap:12px;width:320px;}
+.login-form input{
+  background:var(--surface2);border:1px solid var(--border);color:var(--white);
+  font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.15em;
+  padding:14px 18px;outline:none;transition:border-color 0.3s;
+}
+.login-form input:focus{border-color:var(--gold);}
+.login-form input::placeholder{color:var(--smoke);}
+.login-btn{
+  background:var(--gold);color:var(--black);border:none;
+  font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:0.3em;
+  padding:14px;cursor:pointer;transition:0.3s;
+}
+.login-btn:hover{background:var(--gold-bright);}
+.login-error{font-size:0.42rem;color:var(--red);letter-spacing:0.2em;text-align:center;opacity:0;transition:opacity 0.3s;}
+.login-error.show{opacity:1;}
+
+/* LAYOUT */
+#app{display:none;min-height:100vh;}
+.sidebar{
+  position:fixed;top:0;left:0;width:240px;height:100vh;
+  background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;z-index:100;
+}
+.sidebar-logo{padding:28px 24px;border-bottom:1px solid var(--border);}
+.sidebar-logo a{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.12em;color:var(--white);text-decoration:none;}
+.sidebar-logo a span{color:transparent;-webkit-text-stroke:1px var(--gold);}
+.sidebar-logo .sub{font-size:0.38rem;color:var(--smoke);letter-spacing:0.3em;text-transform:uppercase;display:block;margin-top:4px;}
+.sidebar-nav{flex:1;padding:24px 0;overflow-y:auto;}
+.nav-section-label{font-size:0.36rem;color:rgba(197,160,89,0.4);letter-spacing:0.35em;text-transform:uppercase;padding:0 24px 10px;}
+.sidebar-nav a{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 24px;font-size:0.48rem;letter-spacing:0.18em;text-transform:uppercase;
+  color:var(--smoke);text-decoration:none;transition:0.25s;border-left:2px solid transparent;
+}
+.sidebar-nav a:hover,.sidebar-nav a.active{color:var(--gold);border-left-color:var(--gold);background:rgba(197,160,89,0.05);}
+.sidebar-nav a .icon{font-size:0.7rem;width:16px;text-align:center;}
+.sidebar-bottom{padding:20px 24px;border-top:1px solid var(--border);}
+.sidebar-bottom a{font-size:0.42rem;color:var(--smoke);letter-spacing:0.2em;text-decoration:none;text-transform:uppercase;transition:0.3s;}
+.sidebar-bottom a:hover{color:var(--red);}
+
+.main-content{margin-left:240px;min-height:100vh;padding:0;}
+
+/* TOPBAR */
+.topbar{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:0 40px;height:64px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:50;
+}
+.topbar-title{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.08em;color:var(--white);}
+.topbar-actions{display:flex;gap:12px;align-items:center;}
+
+/* BTNS */
+.btn{
+  font-family:'DM Mono',monospace;font-size:0.44rem;letter-spacing:0.2em;text-transform:uppercase;
+  padding:10px 24px;border:1px solid var(--border-strong);background:transparent;
+  color:var(--white);cursor:pointer;transition:0.25s;
+}
+.btn:hover{border-color:var(--gold);color:var(--gold);}
+.btn-primary{background:var(--gold);color:var(--black);border-color:var(--gold);}
+.btn-primary:hover{background:var(--gold-bright);color:var(--black);border-color:var(--gold-bright);}
+.btn-danger{border-color:rgba(192,57,43,0.4);color:var(--smoke);}
+.btn-danger:hover{border-color:var(--red);color:var(--red);}
+.btn-sm{padding:7px 16px;font-size:0.38rem;}
+.btn-ghost{border-color:transparent;color:var(--smoke);}
+.btn-ghost:hover{border-color:var(--border);color:var(--white);}
+
+/* PANELS */
+.panel{padding:40px;}
+.panel-hidden{display:none !important;}
+
+/* DASHBOARD */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin-bottom:40px;}
+.stat-card{
+  background:var(--surface2);border:1px solid var(--border);
+  padding:28px 24px;
+}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:2.8rem;color:var(--white);line-height:1;}
+.stat-label{font-size:0.38rem;color:var(--smoke);letter-spacing:0.25em;text-transform:uppercase;margin-top:6px;}
+.stat-card.accent .stat-num{color:var(--gold);}
+
+/* TABLE */
+.table-wrap{background:var(--surface2);border:1px solid var(--border);}
+.table-header{padding:20px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.table-header-title{font-size:0.48rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--silver);}
+table{width:100%;border-collapse:collapse;}
+th{
+  text-align:left;padding:14px 28px;
+  font-size:0.38rem;color:rgba(197,160,89,0.5);letter-spacing:0.3em;text-transform:uppercase;
+  border-bottom:1px solid var(--border);font-weight:400;
+}
+td{padding:16px 28px;border-bottom:1px solid rgba(197,160,89,0.07);font-size:0.46rem;color:var(--silver);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(197,160,89,0.03);}
+.td-cover{width:52px;height:52px;object-fit:cover;display:block;border:1px solid var(--border);}
+.td-cover-placeholder{width:52px;height:52px;background:var(--surface3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1rem;}
+.badge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:0.36rem;letter-spacing:0.2em;text-transform:uppercase;
+  padding:4px 10px;border-radius:0;
+}
+.badge-published{background:rgba(39,174,96,0.12);color:#2ecc71;border:1px solid rgba(39,174,96,0.3);}
+.badge-draft{background:rgba(122,122,122,0.12);color:var(--smoke);border:1px solid rgba(122,122,122,0.2);}
+.badge::before{content:'';width:4px;height:4px;border-radius:50%;background:currentColor;}
+
+/* EDITOR */
+.editor-layout{display:grid;grid-template-columns:1fr 320px;gap:2px;min-height:calc(100vh - 64px);}
+.editor-main{padding:40px;background:var(--surface);border-right:1px solid var(--border);}
+.editor-sidebar{padding:32px 28px;background:var(--surface2);overflow-y:auto;}
+
+.field-group{margin-bottom:28px;}
+.field-label{font-size:0.38rem;color:rgba(197,160,89,0.6);letter-spacing:0.3em;text-transform:uppercase;margin-bottom:8px;display:block;}
+.field-input{
+  width:100%;background:var(--surface3);border:1px solid var(--border);
+  color:var(--white);font-family:'DM Mono',monospace;font-size:0.58rem;
+  letter-spacing:0.08em;padding:13px 16px;outline:none;transition:border-color 0.3s;resize:none;
+}
+.field-input:focus{border-color:var(--gold);}
+.field-input::placeholder{color:var(--smoke);}
+.field-select{
+  width:100%;background:var(--surface3);border:1px solid var(--border);
+  color:var(--white);font-family:'DM Mono',monospace;font-size:0.5rem;
+  letter-spacing:0.1em;padding:13px 16px;outline:none;cursor:pointer;
+  appearance:none;
+}
+
+/* BLOCK EDITOR */
+.blocks-area{display:flex;flex-direction:column;gap:3px;}
+.block-item{
+  background:var(--surface3);border:1px solid var(--border);
+  transition:border-color 0.25s;position:relative;
+}
+.block-item:hover{border-color:rgba(197,160,89,0.25);}
+.block-toolbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;border-bottom:1px solid var(--border);
+  background:rgba(0,0,0,0.3);
+}
+.block-type-label{font-size:0.35rem;color:rgba(197,160,89,0.4);letter-spacing:0.3em;text-transform:uppercase;}
+.block-actions{display:flex;gap:4px;}
+.block-btn{
+  background:none;border:none;color:var(--smoke);cursor:pointer;
+  font-size:0.65rem;padding:2px 6px;transition:color 0.2s;
+}
+.block-btn:hover{color:var(--gold);}
+.block-btn.del:hover{color:var(--red);}
+.block-content{padding:14px;}
+.block-textarea{
+  width:100%;background:transparent;border:none;
+  color:var(--white);font-family:'Cormorant Garamond',serif;
+  font-size:1.05rem;line-height:1.7;padding:0;outline:none;resize:none;
+  min-height:80px;
+}
+.block-textarea.heading{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:0.04em;line-height:1.1;min-height:50px;}
+.block-textarea.quote{font-style:italic;font-size:1.15rem;color:var(--gold);border-left:2px solid var(--gold);padding-left:16px;}
+.block-textarea.caption{font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--smoke);letter-spacing:0.15em;min-height:30px;}
+.block-image-area{
+  border:2px dashed var(--border);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:10px;padding:32px;
+  cursor:pointer;transition:border-color 0.3s;min-height:160px;position:relative;
+}
+.block-image-area:hover{border-color:var(--gold);}
+.block-image-area img{width:100%;max-height:400px;object-fit:cover;display:block;}
+.block-image-area .img-overlay{
+  position:absolute;inset:0;background:rgba(0,0,0,0.6);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity 0.3s;
+}
+.block-image-area:hover .img-overlay{opacity:1;}
+.img-upload-hint{font-size:0.42rem;color:var(--smoke);letter-spacing:0.2em;text-transform:uppercase;}
+
+.add-block-bar{
+  display:flex;gap:3px;flex-wrap:wrap;padding:16px 0;
+  border-top:1px solid var(--border);margin-top:12px;
+}
+.add-block-btn{
+  font-family:'DM Mono',monospace;font-size:0.38rem;letter-spacing:0.2em;text-transform:uppercase;
+  padding:8px 14px;background:var(--surface3);border:1px solid var(--border);
+  color:var(--smoke);cursor:pointer;transition:0.25s;
+}
+.add-block-btn:hover{border-color:var(--gold);color:var(--gold);}
+
+/* SIDEBAR EDITOR */
+.sidebar-section{margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid var(--border);}
+.sidebar-section:last-child{border-bottom:none;}
+.sidebar-section-title{font-size:0.38rem;color:rgba(197,160,89,0.5);letter-spacing:0.35em;text-transform:uppercase;margin-bottom:16px;}
+
+/* COVER UPLOAD */
+.cover-upload{
+  width:100%;aspect-ratio:3/4;background:var(--surface3);border:2px dashed var(--border);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;transition:border-color 0.3s;position:relative;overflow:hidden;
+}
+.cover-upload:hover{border-color:var(--gold);}
+.cover-upload img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.cover-upload .cover-overlay{
+  position:absolute;inset:0;background:rgba(0,0,0,0.6);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  opacity:0;transition:opacity 0.3s;
+}
+.cover-upload:hover .cover-overlay,.cover-upload.empty .cover-overlay{opacity:1;}
+.cover-hint{font-size:0.38rem;color:var(--silver);letter-spacing:0.2em;text-align:center;}
+
+/* IMAGES GALLERY */
+.gallery-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+.gallery-item{position:relative;aspect-ratio:1;background:var(--surface3);border:1px solid var(--border);overflow:hidden;}
+.gallery-item img{width:100%;height:100%;object-fit:cover;display:block;}
+.gallery-item-remove{
+  position:absolute;top:4px;right:4px;background:rgba(192,57,43,0.85);border:none;
+  color:#fff;width:20px;height:20px;cursor:pointer;font-size:0.6rem;
+  display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;
+}
+.gallery-item:hover .gallery-item-remove{opacity:1;}
+.gallery-add{
+  aspect-ratio:1;background:var(--surface3);border:2px dashed var(--border);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-size:1.4rem;color:var(--smoke);transition:0.3s;
+}
+.gallery-add:hover{border-color:var(--gold);color:var(--gold);}
+
+/* TOAST */
+.toast{
+  position:fixed;bottom:32px;right:32px;z-index:9999;
+  background:var(--surface2);border:1px solid var(--border-strong);
+  padding:14px 22px;font-size:0.45rem;letter-spacing:0.18em;text-transform:uppercase;
+  color:var(--gold);transform:translateY(80px);opacity:0;
+  transition:all 0.4s cubic-bezier(.16,1,.3,1);pointer-events:none;
+}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.error{color:var(--red);border-color:rgba(192,57,43,0.4);}
+
+/* MODAL */
+.modal-bg{
+  position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,0.85);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity 0.3s;
+}
+.modal-bg.open{opacity:1;pointer-events:auto;}
+.modal{
+  background:var(--surface2);border:1px solid var(--border);
+  padding:40px;max-width:480px;width:90%;
+}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;margin-bottom:12px;}
+.modal-body{font-size:0.5rem;color:var(--smoke);line-height:1.7;margin-bottom:28px;letter-spacing:0.1em;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;}
+
+/* EMPTY STATE */
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:80px 40px;text-align:center;gap:16px;
+}
+.empty-icon{font-size:3rem;opacity:0.3;}
+.empty-title{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--smoke);}
+.empty-sub{font-size:0.44rem;color:rgba(122,122,122,0.6);letter-spacing:0.15em;max-width:320px;line-height:1.8;}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--surface);}
+::-webkit-scrollbar-thumb{background:var(--border-strong);}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div>
+    <div class="login-logo">LW.<span>STUDIOS</span></div>
+    <div class="login-sub">Panel de Control — Acceso Restringido</div>
+  </div>
+  <div class="login-form">
+    <input type="password" id="pwd-input" placeholder="Contraseña" autocomplete="current-password">
+    <button class="login-btn" onclick="doLogin()">Acceder</button>
+    <div class="login-error" id="login-error">Contraseña incorrecta</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <a href="EDITION_STARS-LBWKRS.html">LW.<span>STUDIOS</span></a>
+      <span class="sub">Admin Panel</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Navegación</div>
+      <a href="#" class="active" onclick="showPanel('dashboard',this)"><span class="icon">◈</span> Dashboard</a>
+      <a href="#" onclick="showPanel('stories',this)"><span class="icon">◉</span> Historias</a>
+      <a href="#" onclick="showPanel('new-story',this)" id="nav-new"><span class="icon">＋</span> Nueva Historia</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <a href="EDITION_STARS-LBWKRS.html" target="_blank">↗ Ver Sitio</a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+
+    <!-- TOPBAR -->
+    <div class="topbar" id="topbar">
+      <span class="topbar-title" id="topbar-title">Dashboard</span>
+      <div class="topbar-actions" id="topbar-actions"></div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="panel" id="panel-dashboard">
+      <div class="stats-row">
+        <div class="stat-card accent"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Historias Totales</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-published">0</div><div class="stat-label">Publicadas</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-drafts">0</div><div class="stat-label">Borradores</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-images">0</div><div class="stat-label">Imágenes Subidas</div></div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-header-title">Últimas Historias</span>
+          <button class="btn btn-primary btn-sm" onclick="showPanel('new-story',document.getElementById('nav-new'))">+ Nueva</button>
+        </div>
+        <div id="dashboard-recent"></div>
+      </div>
+    </div>
+
+    <!-- STORIES LIST -->
+    <div class="panel panel-hidden" id="panel-stories">
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-header-title">Todas las Historias</span>
+          <button class="btn btn-primary btn-sm" onclick="showPanel('new-story',document.getElementById('nav-new'))">+ Nueva Historia</button>
+        </div>
+        <div id="stories-table"></div>
+      </div>
+    </div>
+
+    <!-- NEW / EDIT STORY -->
+    <div class="panel-hidden" id="panel-new-story">
+      <div class="editor-layout">
+        <!-- MAIN EDITOR -->
+        <div class="editor-main">
+          <div class="field-group">
+            <label class="field-label">Título de la Historia</label>
+            <input type="text" class="field-input" id="story-title" placeholder="EJ: DEAD ON ARRIVAL">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Subtítulo / Tagline</label>
+            <input type="text" class="field-input" id="story-tagline" placeholder="Una línea que lo diga todo">
+          </div>
+
+          <!-- BLOQUES -->
+          <div class="field-group">
+            <label class="field-label">Contenido</label>
+            <div class="blocks-area" id="blocks-area"></div>
+            <div class="add-block-bar">
+              <button class="add-block-btn" onclick="addBlock('paragraph')">+ Párrafo</button>
+              <button class="add-block-btn" onclick="addBlock('heading')">+ Título</button>
+              <button class="add-block-btn" onclick="addBlock('quote')">+ Cita</button>
+              <button class="add-block-btn" onclick="addBlock('image')">+ Imagen</button>
+              <button class="add-block-btn" onclick="addBlock('caption')">+ Pie de Foto</button>
+              <button class="add-block-btn" onclick="addBlock('divider')">+ Separador</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- EDITOR SIDEBAR -->
+        <div class="editor-sidebar">
+
+          <!-- PORTADA -->
+          <div class="sidebar-section">
+            <div class="sidebar-section-title">Foto de Portada</div>
+            <div class="cover-upload empty" id="cover-upload" onclick="document.getElementById('cover-file').click()">
+              <img id="cover-preview" src="" style="display:none">
+              <div class="cover-overlay">
+                <div style="font-size:1.5rem">⊕</div>
+                <div class="cover-hint">Subir portada<br>JPG / PNG / WEBP</div>
+              </div>
+            </div>
+            <input type="file" id="cover-file" accept="image/*" style="display:none" onchange="handleCoverUpload(this)">
+            <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:6px" id="cover-remove-btn" onclick="removeCover()" style="display:none">✕ Quitar portada</button>
+          </div>
+
+          <!-- GALERÍA -->
+          <div class="sidebar-section">
+            <div class="sidebar-section-title">Galería de Imágenes</div>
+            <div class="gallery-grid" id="gallery-grid">
+              <div class="gallery-add" onclick="document.getElementById('gallery-file').click()">＋</div>
+            </div>
+            <input type="file" id="gallery-file" accept="image/*" multiple style="display:none" onchange="handleGalleryUpload(this)">
+          </div>
+
+          <!-- METADATOS -->
+          <div class="sidebar-section">
+            <div class="sidebar-section-title">Detalles</div>
+            <div class="field-group">
+              <label class="field-label">Tipo</label>
+              <select class="field-select field-input" id="story-type">
+                <option value="historia">Historia</option>
+                <option value="satira">Sátira</option>
+                <option value="ensayo">Ensayo</option>
+                <option value="imagen">Imagen / Visual</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Descripción Breve (card)</label>
+              <textarea class="field-input" id="story-desc" rows="3" placeholder="Lo que ve el usuario en la card..."></textarea>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Volumen (Nº)</label>
+              <input type="number" class="field-input" id="story-vol" placeholder="1" min="1">
+            </div>
+          </div>
+
+          <!-- ESTADO -->
+          <div class="sidebar-section">
+            <div class="sidebar-section-title">Estado</div>
+            <select class="field-select field-input" id="story-status">
+              <option value="draft">Borrador</option>
+              <option value="published">Publicado</option>
+            </select>
+          </div>
+
+          <!-- ACCIONES -->
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button class="btn btn-primary" onclick="saveStory()">Guardar Historia</button>
+            <button class="btn btn-ghost" onclick="previewStory()">↗ Vista Previa</button>
+            <button class="btn btn-danger btn-sm" id="delete-btn" onclick="confirmDelete()" style="display:none">✕ Eliminar</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL CONFIRMACIÓN -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <div class="modal-title">¿Eliminar historia?</div>
+    <div class="modal-body">Esta acción es permanente. La historia y todas sus imágenes serán eliminadas de Supabase. No se puede deshacer.</div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-danger" onclick="deleteStory()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════
+// CONFIGURACIÓN SUPABASE
+// ════════════════════════════════════════════════
+const SUPABASE_URL = 'https://xkntclywhhddtniosjuxo.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrbnRjbHl3aGhkdG5pb3NqdXhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMzExNDAsImV4cCI6MjA5MjcwNzE0MH0.aPAYF_rdsvCXzaLg_3bKTX7F7eoRGq1k_WL-r6NEdZ8';
+const ADMIN_PASSWORD = 'Alejandrorey16';
+
+// ════════════════════════════════════════════════
+// SUPABASE CLIENT (sin SDK — fetch puro)
+// ════════════════════════════════════════════════
+const sb = {
+  async query(table, params = '') {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' }
+    });
+    return r.json();
+  },
+  async insert(table, data) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      body: JSON.stringify(data)
+    });
+    return r.json();
+  },
+  async update(table, id, data) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      body: JSON.stringify(data)
+    });
+    return r.json();
+  },
+  async delete(table, id) {
+    await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    });
+  },
+  async uploadFile(bucket, path, file) {
+    const r = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': file.type },
+      body: file
+    });
+    const data = await r.json();
+    return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
+  },
+  async deleteFile(bucket, path) {
+    await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prefixes: [path] })
+    });
+  }
+};
+
+// ════════════════════════════════════════════════
+// ESTADO LOCAL
+// ════════════════════════════════════════════════
+let stories = [];
+let currentStoryId = null;
+let blocks = [];
+let coverUrl = null;
+let galleryUrls = [];
+let blockIdCounter = 0;
+
+// ════════════════════════════════════════════════
+// LOGIN
+// ════════════════════════════════════════════════
+function doLogin() {
+  const pwd = document.getElementById('pwd-input').value;
+  if (pwd === ADMIN_PASSWORD) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadStories();
+  } else {
+    document.getElementById('login-error').classList.add('show');
+    document.getElementById('pwd-input').value = '';
+    setTimeout(() => document.getElementById('login-error').classList.remove('show'), 2500);
+  }
+}
+document.getElementById('pwd-input').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// ════════════════════════════════════════════════
+// NAVEGACIÓN
+// ════════════════════════════════════════════════
+function showPanel(name, link) {
+  document.querySelectorAll('.panel,.editor-layout').forEach(p => p.classList.add('panel-hidden'));
+  document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+  
+  const panelEl = document.getElementById(`panel-${name}`);
+  if (panelEl) { panelEl.classList.remove('panel-hidden'); }
+  
+  // Editor especial (no tiene clase panel)
+  if (name === 'new-story') {
+    const ed = document.getElementById('panel-new-story');
+    ed.classList.remove('panel-hidden');
+    document.getElementById('panel-dashboard').classList.add('panel-hidden');
+  }
+
+  if (link) link.classList.add('active');
+
+  const titles = { dashboard: 'Dashboard', stories: 'Todas las Historias', 'new-story': currentStoryId ? 'Editar Historia' : 'Nueva Historia' };
+  document.getElementById('topbar-title').textContent = titles[name] || name;
+
+  const actions = document.getElementById('topbar-actions');
+  actions.innerHTML = name === 'new-story'
+    ? `<button class="btn btn-ghost btn-sm" onclick="resetEditor();showPanel('stories',document.querySelectorAll('.sidebar-nav a')[1])">← Volver</button>`
+    : '';
+
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'stories') renderStoriesTable();
+  if (name === 'new-story' && !currentStoryId) resetEditor();
+}
+
+// ════════════════════════════════════════════════
+// CARGAR HISTORIAS
+// ════════════════════════════════════════════════
+async function loadStories() {
+  try {
+    stories = await sb.query('stories', '?order=created_at.desc');
+    if (!Array.isArray(stories)) stories = [];
+  } catch(e) { stories = []; }
+  renderDashboard();
+}
+
+// ════════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════════
+function renderDashboard() {
+  const published = stories.filter(s => s.status === 'published');
+  const drafts = stories.filter(s => s.status === 'draft');
+  const totalImgs = stories.reduce((a, s) => a + (s.gallery_urls ? s.gallery_urls.length : 0) + (s.cover_url ? 1 : 0), 0);
+
+  document.getElementById('stat-total').textContent = stories.length;
+  document.getElementById('stat-published').textContent = published.length;
+  document.getElementById('stat-drafts').textContent = drafts.length;
+  document.getElementById('stat-images').textContent = totalImgs;
+
+  const recent = stories.slice(0, 5);
+  document.getElementById('dashboard-recent').innerHTML = recent.length
+    ? buildTable(recent)
+    : `<div class="empty-state"><div class="empty-icon">◈</div><div class="empty-title">Sin historias aún</div><div class="empty-sub">Crea tu primera historia para que aparezca aquí</div></div>`;
+}
+
+// ════════════════════════════════════════════════
+// TABLA
+// ════════════════════════════════════════════════
+function buildTable(list) {
+  return `<table>
+    <thead><tr>
+      <th>Portada</th><th>Título</th><th>Tipo</th><th>Vol.</th><th>Estado</th><th>Fecha</th><th></th>
+    </tr></thead>
+    <tbody>
+    ${list.map(s => `<tr>
+      <td>${s.cover_url ? `<img class="td-cover" src="${s.cover_url}" alt="">` : `<div class="td-cover-placeholder">◈</div>`}</td>
+      <td style="color:var(--white);font-size:0.5rem;letter-spacing:0.08em;">${s.title || '—'}</td>
+      <td style="font-size:0.4rem;text-transform:uppercase;letter-spacing:0.2em;">${s.type || '—'}</td>
+      <td>${s.vol ? 'Vol. ' + s.vol : '—'}</td>
+      <td><span class="badge ${s.status === 'published' ? 'badge-published' : 'badge-draft'}">${s.status === 'published' ? 'Publicada' : 'Borrador'}</span></td>
+      <td style="font-size:0.4rem;">${s.created_at ? new Date(s.created_at).toLocaleDateString('es-ES') : '—'}</td>
+      <td><div style="display:flex;gap:6px;">
+        <button class="btn btn-sm" onclick="editStory('${s.id}')">Editar</button>
+      </div></td>
+    </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function renderStoriesTable() {
+  document.getElementById('stories-table').innerHTML = stories.length
+    ? buildTable(stories)
+    : `<div class="empty-state"><div class="empty-icon">◈</div><div class="empty-title">Sin historias</div><div class="empty-sub">Empieza creando tu primera historia</div></div>`;
+}
+
+// ════════════════════════════════════════════════
+// EDITOR — BLOQUES
+// ════════════════════════════════════════════════
+function addBlock(type, data = {}) {
+  const id = ++blockIdCounter;
+  const block = { id, type, content: data.content || '', imageUrl: data.imageUrl || null };
+  blocks.push(block);
+  renderBlocks();
+  return id;
+}
+
+function removeBlock(id) {
+  blocks = blocks.filter(b => b.id !== id);
+  renderBlocks();
+}
+
+function moveBlock(id, dir) {
+  const idx = blocks.findIndex(b => b.id === id);
+  if (dir === -1 && idx === 0) return;
+  if (dir === 1 && idx === blocks.length - 1) return;
+  const tmp = blocks[idx + dir];
+  blocks[idx + dir] = blocks[idx];
+  blocks[idx] = tmp;
+  renderBlocks();
+}
+
+function renderBlocks() {
+  const area = document.getElementById('blocks-area');
+  area.innerHTML = '';
+  blocks.forEach(block => {
+    const el = document.createElement('div');
+    el.className = 'block-item';
+    el.dataset.id = block.id;
+
+    const typeLabels = { paragraph: 'Párrafo', heading: 'Título', quote: 'Cita', image: 'Imagen', caption: 'Pie de Foto', divider: 'Separador' };
+
+    let contentHtml = '';
+    if (block.type === 'divider') {
+      contentHtml = `<div style="height:1px;background:var(--border);margin:8px 0;"></div>`;
+    } else if (block.type === 'image') {
+      contentHtml = `<div class="block-image-area" onclick="triggerBlockImageUpload(${block.id})">
+        ${block.imageUrl ? `<img src="${block.imageUrl}" style="width:100%;max-height:380px;object-fit:cover;display:block;">
+          <div class="img-overlay"><span style="color:#fff;font-size:0.5rem;letter-spacing:0.2em">CAMBIAR IMAGEN</span></div>` 
+        : `<div class="img-upload-hint">Click para subir imagen</div>`}
+      </div>
+      <input type="file" id="block-img-${block.id}" accept="image/*" style="display:none" onchange="handleBlockImage(${block.id},this)">`;
+    } else {
+      const cls = block.type === 'heading' ? 'heading' : block.type === 'quote' ? 'quote' : block.type === 'caption' ? 'caption' : '';
+      const placeholder = { paragraph: 'Escribe el contenido...', heading: 'TÍTULO DE SECCIÓN', quote: 'La cita que lo cambia todo...', caption: 'Pie de foto...' };
+      contentHtml = `<div class="block-content">
+        <textarea class="block-textarea ${cls}" 
+          placeholder="${placeholder[block.type] || ''}"
+          oninput="updateBlockContent(${block.id},this.value)"
+          rows="${block.type === 'paragraph' ? 4 : 1}">${block.content}</textarea>
+      </div>`;
+    }
+
+    el.innerHTML = `
+      <div class="block-toolbar">
+        <span class="block-type-label">${typeLabels[block.type] || block.type}</span>
+        <div class="block-actions">
+          <button class="block-btn" onclick="moveBlock(${block.id},-1)" title="Subir">↑</button>
+          <button class="block-btn" onclick="moveBlock(${block.id},1)" title="Bajar">↓</button>
+          <button class="block-btn del" onclick="removeBlock(${block.id})" title="Eliminar">✕</button>
+        </div>
+      </div>
+      ${contentHtml}
+    `;
+    area.appendChild(el);
+
+    // Auto-resize textareas
+    el.querySelectorAll('textarea').forEach(ta => {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+      ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; });
+    });
+  });
+}
+
+function updateBlockContent(id, value) {
+  const b = blocks.find(b => b.id === id);
+  if (b) b.content = value;
+}
+
+function triggerBlockImageUpload(id) {
+  document.getElementById(`block-img-${id}`).click();
+}
+
+async function handleBlockImage(id, input) {
+  const file = input.files[0];
+  if (!file) return;
+  showToast('Subiendo imagen...', false, true);
+  const path = `blocks/${Date.now()}_${file.name}`;
+  const url = await sb.uploadFile('stories', path, file);
+  const b = blocks.find(b => b.id === id);
+  if (b) { b.imageUrl = url; renderBlocks(); }
+  showToast('Imagen subida');
+}
+
+// ════════════════════════════════════════════════
+// PORTADA
+// ════════════════════════════════════════════════
+function handleCoverUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    coverUrl = { file, preview: e.target.result };
+    const img = document.getElementById('cover-preview');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('cover-upload').classList.remove('empty');
+    document.getElementById('cover-remove-btn').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeCover() {
+  coverUrl = null;
+  document.getElementById('cover-preview').style.display = 'none';
+  document.getElementById('cover-preview').src = '';
+  document.getElementById('cover-upload').classList.add('empty');
+  document.getElementById('cover-remove-btn').style.display = 'none';
+  document.getElementById('cover-file').value = '';
+}
+
+// ════════════════════════════════════════════════
+// GALERÍA
+// ════════════════════════════════════════════════
+function handleGalleryUpload(input) {
+  const files = Array.from(input.files);
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      galleryUrls.push({ file, preview: e.target.result, uploaded: null });
+      renderGallery();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function removeGalleryItem(idx) {
+  galleryUrls.splice(idx, 1);
+  renderGallery();
+}
+
+function renderGallery() {
+  const grid = document.getElementById('gallery-grid');
+  grid.innerHTML = galleryUrls.map((item, i) => `
+    <div class="gallery-item">
+      <img src="${item.preview || item}" alt="">
+      <button class="gallery-item-remove" onclick="removeGalleryItem(${i})">✕</button>
+    </div>
+  `).join('') + `<div class="gallery-add" onclick="document.getElementById('gallery-file').click()">＋</div>`;
+}
+
+// ════════════════════════════════════════════════
+// GUARDAR HISTORIA
+// ════════════════════════════════════════════════
+async function saveStory() {
+  const title = document.getElementById('story-title').value.trim();
+  if (!title) { showToast('El título es obligatorio', true); return; }
+
+  showToast('Guardando...', false, true);
+
+  // Subir portada si es nueva
+  let finalCoverUrl = typeof coverUrl === 'string' ? coverUrl : null;
+  if (coverUrl && coverUrl.file) {
+    const path = `covers/${Date.now()}_${coverUrl.file.name}`;
+    finalCoverUrl = await sb.uploadFile('stories', path, coverUrl.file);
+  }
+
+  // Subir imágenes de galería nuevas
+  const finalGallery = [];
+  for (const item of galleryUrls) {
+    if (typeof item === 'string') { finalGallery.push(item); continue; }
+    if (item.uploaded) { finalGallery.push(item.uploaded); continue; }
+    const path = `gallery/${Date.now()}_${item.file.name}`;
+    const url = await sb.uploadFile('stories', path, item.file);
+    item.uploaded = url;
+    finalGallery.push(url);
+  }
+
+  const payload = {
+    title: document.getElementById('story-title').value.trim(),
+    tagline: document.getElementById('story-tagline').value.trim(),
+    description: document.getElementById('story-desc').value.trim(),
+    type: document.getElementById('story-type').value,
+    vol: parseInt(document.getElementById('story-vol').value) || null,
+    status: document.getElementById('story-status').value,
+    cover_url: finalCoverUrl,
+    gallery_urls: finalGallery,
+    blocks: blocks,
+    updated_at: new Date().toISOString()
+  };
+
+  try {
+    if (currentStoryId) {
+      await sb.update('stories', currentStoryId, payload);
+    } else {
+      payload.created_at = new Date().toISOString();
+      const result = await sb.insert('stories', payload);
+      if (Array.isArray(result) && result[0]) currentStoryId = result[0].id;
+    }
+    await loadStories();
+    showToast('Historia guardada ✓');
+    document.getElementById('delete-btn').style.display = 'block';
+  } catch(e) {
+    showToast('Error al guardar. Revisa la configuración de Supabase.', true);
+  }
+}
+
+// ════════════════════════════════════════════════
+// EDITAR HISTORIA
+// ════════════════════════════════════════════════
+function editStory(id) {
+  const story = stories.find(s => s.id == id || s.id === id);
+  if (!story) return;
+
+  currentStoryId = story.id;
+  blocks = [];
+  blockIdCounter = 0;
+  galleryUrls = [];
+  coverUrl = null;
+
+  document.getElementById('story-title').value = story.title || '';
+  document.getElementById('story-tagline').value = story.tagline || '';
+  document.getElementById('story-desc').value = story.description || '';
+  document.getElementById('story-type').value = story.type || 'historia';
+  document.getElementById('story-vol').value = story.vol || '';
+  document.getElementById('story-status').value = story.status || 'draft';
+
+  // Portada
+  if (story.cover_url) {
+    coverUrl = story.cover_url;
+    const img = document.getElementById('cover-preview');
+    img.src = story.cover_url;
+    img.style.display = 'block';
+    document.getElementById('cover-upload').classList.remove('empty');
+    document.getElementById('cover-remove-btn').style.display = 'block';
+  }
+
+  // Galería
+  if (Array.isArray(story.gallery_urls)) {
+    galleryUrls = story.gallery_urls.map(url => ({ preview: url, uploaded: url }));
+    renderGallery();
+  }
+
+  // Bloques
+  if (Array.isArray(story.blocks)) {
+    story.blocks.forEach(b => addBlock(b.type, b));
+  }
+
+  document.getElementById('delete-btn').style.display = 'block';
+  showPanel('new-story', document.getElementById('nav-new'));
+  document.getElementById('topbar-title').textContent = 'Editar Historia';
+}
+
+// ════════════════════════════════════════════════
+// ELIMINAR
+// ════════════════════════════════════════════════
+function confirmDelete() { document.getElementById('modal-bg').classList.add('open'); }
+function closeModal() { document.getElementById('modal-bg').classList.remove('open'); }
+
+async function deleteStory() {
+  closeModal();
+  if (!currentStoryId) return;
+  await sb.delete('stories', currentStoryId);
+  await loadStories();
+  resetEditor();
+  showPanel('stories', document.querySelectorAll('.sidebar-nav a')[1]);
+  showToast('Historia eliminada');
+}
+
+// ════════════════════════════════════════════════
+// RESET EDITOR
+// ════════════════════════════════════════════════
+function resetEditor() {
+  currentStoryId = null;
+  blocks = [];
+  blockIdCounter = 0;
+  galleryUrls = [];
+  coverUrl = null;
+  document.getElementById('story-title').value = '';
+  document.getElementById('story-tagline').value = '';
+  document.getElementById('story-desc').value = '';
+  document.getElementById('story-type').value = 'historia';
+  document.getElementById('story-vol').value = '';
+  document.getElementById('story-status').value = 'draft';
+  removeCover();
+  renderGallery();
+  renderBlocks();
+  document.getElementById('delete-btn').style.display = 'none';
+}
+
+// ════════════════════════════════════════════════
+// PREVIEW
+// ════════════════════════════════════════════════
+function previewStory() {
+  if (!currentStoryId) { showToast('Guarda primero la historia', true); return; }
+  window.open(`historia.html?id=${currentStoryId}`, '_blank');
+}
+
+// ════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════
+function showToast(msg, isError = false, persist = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  if (!persist) setTimeout(() => { t.classList.remove('show'); }, 2800);
+}
+
+// Init
+renderGallery();
+</script>
+</body>
+</html>
