@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perfil — Liberty Works Studios</title>
+<link rel="icon" href="FAVICON2.png" type="image/png">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root {
+  --gold: #c5a059;
+  --gold-bright: #f0d78c;
+  --gold-deep: #846a32;
+  --white: #f5f3ee;
+  --silver: #d1d1d1;
+  --smoke: #7a7a7a;
+  --black: #080808;
+  --surface: #0f0e0a;
+  --surface2: #161410;
+  --border: rgba(197,160,89,0.15);
+  --border-strong: rgba(197,160,89,0.3);
+}
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+@media(hover:hover) and (pointer:fine){*,*::before,*::after{cursor:none!important;}}
+html{scroll-behavior:smooth;}
+body{background:var(--black);color:var(--white);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden;}
+
+/* ── ATMÓSFERA ── */
+body::before{content:'';position:fixed;inset:0;z-index:1;
+  background:
+    radial-gradient(ellipse 110% 80% at 85% -5%,#1a160d 0%,#080808 45%,transparent 68%),
+    radial-gradient(ellipse 70% 70% at -5% 95%,#14110b 0%,#050505 40%,transparent 65%);
+  pointer-events:none;}
+body::after{content:'';position:fixed;inset:0;z-index:2;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity:0.025;pointer-events:none;}
+#glow-top{position:fixed;top:-25vh;right:-20vw;width:90vw;height:90vw;background:radial-gradient(circle,rgba(197,160,89,0.12) 0%,rgba(132,106,50,0.04) 45%,transparent 70%);pointer-events:none;z-index:1;border-radius:50%;}
+#glow-bot{position:fixed;bottom:-20vh;left:-15vw;width:65vw;height:65vw;background:radial-gradient(circle,rgba(132,106,50,0.1) 0%,rgba(50,40,20,0.04) 45%,transparent 70%);pointer-events:none;z-index:1;border-radius:50%;}
+#dust-canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:3;opacity:0.25;}
+
+/* ── CURSOR ── */
+.cursor{position:fixed;width:18px;height:18px;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);display:none;transition:width 0.3s cubic-bezier(.16,1,.3,1),height 0.3s cubic-bezier(.16,1,.3,1);}
+.cursor svg{width:100%;height:100%;display:block;transition:transform 0.4s cubic-bezier(.16,1,.3,1);filter:drop-shadow(0 0 4px rgba(197,160,89,0.6));}
+.cursor.hovered{width:30px;height:30px;}
+.cursor.hovered svg{transform:rotate(180deg);filter:drop-shadow(0 0 8px rgba(240,215,140,0.9));}
+.cursor-ring{position:fixed;width:36px;height:36px;border:1px solid rgba(197,160,89,0.25);border-radius:50%;pointer-events:none;z-index:99998;transform:translate(-50%,-50%);transition:width 0.35s cubic-bezier(.16,1,.3,1),height 0.35s cubic-bezier(.16,1,.3,1),border-color 0.3s;display:none;}
+.cursor-ring.hovered{width:58px;height:58px;border-color:rgba(197,160,89,0.5);}
+@media(hover:hover) and (pointer:fine){.cursor,.cursor-ring{display:block;}}
+
+/* ── PROGRESS ── */
+#read-progress{position:fixed;top:0;left:0;height:2px;width:0%;background:linear-gradient(90deg,var(--gold-deep),var(--gold),var(--gold-bright));z-index:9000;pointer-events:none;transition:width 0.1s linear;box-shadow:0 0 8px rgba(197,160,89,0.5);}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;justify-content:space-between;align-items:center;padding:0 72px;height:72px;transition:0.5s;}
+nav.scrolled{background:rgba(8,8,8,0.94);border-bottom:1px solid var(--border);backdrop-filter:blur(16px);}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.12em;color:var(--white);text-decoration:none;}
+.nav-logo span{color:transparent;-webkit-text-stroke:1px var(--gold);}
+.nav-back{font-family:'DM Mono',monospace;font-size:0.46rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--smoke);text-decoration:none;transition:0.3s;display:flex;align-items:center;gap:10px;}
+.nav-back::before{content:'←';font-size:0.7rem;transition:transform 0.3s;}
+.nav-back:hover{color:var(--gold);}
+.nav-back:hover::before{transform:translateX(-4px);}
+
+/* ── HERO DEL PERFIL ── */
+.profile-hero{position:relative;padding:120px 72px 0;z-index:10;}
+.profile-hero-inner{max-width:900px;margin:0 auto;display:flex;align-items:flex-end;gap:48px;padding-bottom:48px;border-bottom:1px solid var(--border);}
+
+/* Avatar */
+.avatar-wrap{position:relative;flex-shrink:0;}
+.avatar-ring{width:128px;height:128px;border-radius:50%;border:2px solid var(--border-strong);background:var(--surface);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;transition:border-color 0.3s;}
+.avatar-ring:hover{border-color:var(--gold);}
+.avatar-ring img{width:100%;height:100%;object-fit:cover;}
+.avatar-initial{font-family:'Bebas Neue',sans-serif;font-size:3rem;color:var(--gold);opacity:0.6;}
+.avatar-edit-btn{position:absolute;bottom:0;right:0;width:32px;height:32px;background:var(--gold);border:2px solid var(--black);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.7rem;transition:0.3s;}
+.avatar-edit-btn:hover{background:var(--gold-bright);transform:scale(1.1);}
+
+/* Info */
+.profile-info{flex:1;min-width:0;}
+.profile-username{font-family:'DM Mono',monospace;font-size:0.46rem;color:var(--gold);letter-spacing:0.3em;text-transform:uppercase;margin-bottom:6px;opacity:0.7;}
+.profile-name{font-family:'Bebas Neue',sans-serif;font-size:clamp(2rem,5vw,3.5rem);color:var(--white);letter-spacing:0.03em;line-height:1;margin-bottom:16px;}
+.profile-bio{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.1rem;color:var(--silver);line-height:1.7;max-width:520px;opacity:0.8;}
+.profile-bio.empty{font-size:0.5rem;color:var(--smoke);font-style:normal;font-family:'DM Mono',monospace;letter-spacing:0.15em;}
+.profile-meta-row{display:flex;align-items:center;gap:28px;margin-top:24px;}
+.profile-meta-item{display:flex;flex-direction:column;gap:4px;}
+.profile-meta-label{font-size:0.34rem;color:rgba(197,160,89,0.4);letter-spacing:0.28em;text-transform:uppercase;}
+.profile-meta-value{font-size:0.48rem;color:var(--silver);letter-spacing:0.12em;}
+.profile-meta-sep{width:1px;height:28px;background:var(--border);}
+
+/* Edit button */
+.btn-edit-profile{font-family:'DM Mono',monospace;font-size:0.44rem;letter-spacing:0.2em;text-transform:uppercase;background:transparent;border:1px solid var(--border-strong);color:var(--silver);padding:10px 24px;cursor:pointer;transition:0.3s;flex-shrink:0;align-self:flex-start;margin-top:8px;}
+.btn-edit-profile:hover{border-color:var(--gold);color:var(--gold);}
+
+/* ── CONTENIDO PRINCIPAL ── */
+.profile-content{max-width:900px;margin:0 auto;padding:0 72px 120px;position:relative;z-index:10;}
+.profile-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-top:40px;margin-bottom:48px;}
+.profile-tab{font-family:'DM Mono',monospace;font-size:0.42rem;letter-spacing:0.28em;text-transform:uppercase;color:var(--smoke);padding:14px 28px;cursor:pointer;border-bottom:2px solid transparent;transition:0.3s;margin-bottom:-1px;background:transparent;border-top:none;border-left:none;border-right:none;}
+.profile-tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.profile-tab:hover:not(.active){color:var(--silver);}
+
+/* Panel vacío */
+.tab-empty{text-align:center;padding:80px 20px;}
+.tab-empty-icon{font-size:2.5rem;color:rgba(197,160,89,0.12);margin-bottom:20px;}
+.tab-empty-title{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--smoke);letter-spacing:0.06em;margin-bottom:8px;}
+.tab-empty-sub{font-size:0.42rem;color:rgba(122,122,122,0.5);letter-spacing:0.2em;line-height:1.8;}
+
+/* ── MODAL DE EDICIÓN ── */
+#edit-modal{position:fixed;inset:0;z-index:6000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.4s cubic-bezier(.4,0,.2,1);}
+#edit-modal.open{opacity:1;pointer-events:auto;}
+#edit-backdrop{position:absolute;inset:0;background:rgba(5,5,4,0.93);backdrop-filter:blur(14px);}
+#edit-card{position:relative;z-index:1;background:linear-gradient(150deg,#15130e 0%,#0d0c08 60%,#060504 100%);border:1px solid var(--border-strong);width:92vw;max-width:560px;max-height:92vh;overflow-y:auto;padding:48px;transform:scale(0.92) translateY(24px);opacity:0;transition:transform 0.5s cubic-bezier(.16,1,.3,1),opacity 0.4s;scrollbar-width:thin;scrollbar-color:var(--gold-deep) transparent;}
+#edit-modal.open #edit-card{transform:scale(1) translateY(0);opacity:1;}
+.edit-corner{position:absolute;width:12px;height:12px;border-color:rgba(197,160,89,0.4);border-style:solid;}
+.edit-corner.tl{top:10px;left:10px;border-width:1px 0 0 1px;}
+.edit-corner.tr{top:10px;right:10px;border-width:1px 1px 0 0;}
+.edit-corner.bl{bottom:10px;left:10px;border-width:0 0 1px 1px;}
+.edit-corner.br{bottom:10px;right:10px;border-width:0 1px 1px 0;}
+#edit-close{position:absolute;top:16px;right:18px;background:transparent;border:1px solid rgba(197,160,89,0.2);color:rgba(197,160,89,0.5);width:32px;height:32px;font-size:0.65rem;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:0.3s;}
+#edit-close:hover{background:rgba(197,160,89,0.08);border-color:rgba(197,160,89,0.5);color:var(--gold);}
+.edit-title{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:0.05em;color:var(--white);margin-bottom:36px;}
+.edit-section{margin-bottom:28px;}
+.edit-label{font-size:0.36rem;color:rgba(197,160,89,0.45);letter-spacing:0.28em;text-transform:uppercase;margin-bottom:8px;display:block;}
+.edit-input{background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--white);font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.08em;padding:13px 16px;outline:none;transition:border-color 0.3s;width:100%;}
+.edit-input:focus{border-color:rgba(197,160,89,0.5);}
+.edit-input::placeholder{color:rgba(122,122,122,0.4);}
+.edit-textarea{resize:vertical;min-height:90px;line-height:1.7;font-family:'Cormorant Garamond',serif;font-size:1rem;}
+.edit-hint{font-size:0.34rem;color:rgba(122,122,122,0.45);letter-spacing:0.14em;margin-top:5px;}
+.edit-hint.error{color:#c0392b;}
+.edit-hint.ok{color:#27ae60;}
+
+/* Username check */
+.username-row{display:flex;align-items:center;gap:10px;}
+.username-row .edit-input{flex:1;}
+.username-status{font-size:0.55rem;flex-shrink:0;width:22px;text-align:center;}
+
+/* Presets de avatar */
+.avatar-presets{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:8px;}
+.preset-item{aspect-ratio:1;border:2px solid var(--border);border-radius:50%;cursor:pointer;transition:0.25s;display:flex;align-items:center;justify-content:center;font-size:1.3rem;background:var(--surface2);overflow:hidden;}
+.preset-item:hover{border-color:rgba(197,160,89,0.5);}
+.preset-item.selected{border-color:var(--gold);box-shadow:0 0 0 2px rgba(197,160,89,0.2);}
+.preset-item img{width:100%;height:100%;object-fit:cover;}
+
+/* Subir foto */
+.avatar-upload-row{display:flex;align-items:center;gap:12px;margin-top:12px;}
+.avatar-upload-preview{width:52px;height:52px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;color:var(--smoke);}
+.avatar-upload-preview img{width:100%;height:100%;object-fit:cover;}
+.btn-upload{font-family:'DM Mono',monospace;font-size:0.4rem;letter-spacing:0.18em;text-transform:uppercase;background:transparent;border:1px solid var(--border);color:var(--smoke);padding:8px 16px;cursor:pointer;transition:0.25s;}
+.btn-upload:hover{border-color:var(--gold);color:var(--gold);}
+
+/* Botones del modal */
+.edit-actions{display:flex;gap:10px;margin-top:36px;}
+.btn-save{flex:1;background:var(--gold);color:var(--black);border:1px solid var(--gold);font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:0.3em;padding:14px;cursor:pointer;transition:0.3s;position:relative;overflow:hidden;}
+.btn-save:hover{background:var(--gold-bright);border-color:var(--gold-bright);}
+.btn-save:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-save.loading::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);animation:shimmer 1.1s infinite;}
+@keyframes shimmer{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+.btn-cancel{background:transparent;border:1px solid var(--border);color:var(--smoke);font-family:'DM Mono',monospace;font-size:0.44rem;letter-spacing:0.2em;text-transform:uppercase;padding:14px 24px;cursor:pointer;transition:0.3s;}
+.btn-cancel:hover{border-color:var(--border-strong);color:var(--silver);}
+
+/* Mensajes */
+.edit-msg{font-size:0.38rem;letter-spacing:0.16em;padding:10px 14px;text-align:center;display:none;margin-top:12px;}
+.edit-msg.error{color:#e74c3c;background:rgba(231,76,60,0.07);border:1px solid rgba(231,76,60,0.2);}
+.edit-msg.success{color:#27ae60;background:rgba(39,174,96,0.07);border:1px solid rgba(39,174,96,0.2);}
+.edit-msg.show{display:block;}
+
+/* ── ESTADO DE CARGA / ERROR ── */
+.state-screen{min-height:80vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:40px;position:relative;z-index:10;}
+.loader-ring{width:36px;height:36px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.state-title{font-family:'Bebas Neue',sans-serif;font-size:2.5rem;color:var(--smoke);letter-spacing:0.04em;}
+.state-sub{font-size:0.42rem;color:rgba(122,122,122,0.5);letter-spacing:0.2em;text-transform:uppercase;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:28px;right:28px;background:var(--surface);border:1px solid var(--border-strong);color:var(--gold);font-family:'DM Mono',monospace;font-size:0.42rem;letter-spacing:0.18em;padding:14px 22px;z-index:9000;transform:translateY(80px);opacity:0;transition:0.35s cubic-bezier(.16,1,.3,1);}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.error{color:#c0392b;border-color:rgba(192,57,43,0.3);}
+
+/* ── REVEAL ── */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity 0.8s cubic-bezier(.16,1,.3,1),transform 0.8s cubic-bezier(.16,1,.3,1);}
+.reveal.visible{opacity:1;transform:translateY(0);}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--black);}
+::-webkit-scrollbar-thumb{background:var(--border-strong);}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  nav{padding:0 24px;}
+  .profile-hero{padding:100px 24px 0;}
+  .profile-hero-inner{flex-direction:column;align-items:flex-start;gap:28px;}
+  .avatar-ring{width:96px;height:96px;}
+  .profile-content{padding:0 24px 80px;}
+  .profile-tabs{overflow-x:auto;scrollbar-width:none;}
+  .profile-tab{white-space:nowrap;padding:14px 18px;}
+  #edit-card{padding:36px 24px;}
+  .avatar-presets{grid-template-columns:repeat(5,1fr);}
+}
+</style>
+</head>
+<body>
+
+<div id="glow-top"></div>
+<div id="glow-bot"></div>
+<canvas id="dust-canvas"></canvas>
+<div id="read-progress"></div>
+
+<div class="cursor" id="cursor">
+  <svg viewBox="0 0 24 24" fill="none">
+    <path d="M12 2 L14.09 8.26 L20.85 8.27 L15.55 12.14 L17.64 18.39 L12 14.77 L6.36 18.39 L8.45 12.14 L3.15 8.27 L9.91 8.26 Z" fill="var(--gold)" stroke="var(--gold-bright)" stroke-width="0.4"/>
+  </svg>
+</div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav id="main-nav">
+  <a href="index.html" class="nav-logo">LW.<span>STUDIOS</span></a>
+  <a href="index.html" class="nav-back hover-target">Volver al archivo</a>
+</nav>
+
+<!-- CONTENIDO DINÁMICO -->
+<div id="profile-root">
+  <div class="state-screen">
+    <div class="loader-ring"></div>
+    <div class="state-sub">Cargando perfil...</div>
+  </div>
+</div>
+
+<!-- MODAL DE EDICIÓN -->
+<div id="edit-modal">
+  <div id="edit-backdrop"></div>
+  <div id="edit-card">
+    <div class="edit-corner tl"></div><div class="edit-corner tr"></div>
+    <div class="edit-corner bl"></div><div class="edit-corner br"></div>
+    <button id="edit-close">✕</button>
+    <div class="edit-title">Editar Perfil</div>
+
+    <!-- Avatar -->
+    <div class="edit-section">
+      <label class="edit-label">Foto de perfil</label>
+      <div class="avatar-upload-row">
+        <div class="avatar-upload-preview" id="upload-preview">◈</div>
+        <div>
+          <input type="file" id="avatar-file-input" accept="image/*" style="display:none" onchange="handleAvatarFile(event)">
+          <button class="btn-upload hover-target" onclick="document.getElementById('avatar-file-input').click()">+ Subir foto</button>
+          <div class="edit-hint" style="margin-top:6px">JPG, PNG o WEBP · Máx. 2 MB</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Avatares predeterminados -->
+    <div class="edit-section">
+      <label class="edit-label">O elegí un avatar</label>
+      <div class="avatar-presets" id="avatar-presets"></div>
+    </div>
+
+    <!-- Nombre -->
+    <div class="edit-section">
+      <label class="edit-label">Nombre visible</label>
+      <input type="text" class="edit-input" id="edit-name" placeholder="Tu nombre o alias" maxlength="48">
+    </div>
+
+    <!-- Username -->
+    <div class="edit-section">
+      <label class="edit-label">ID único <span style="color:rgba(197,160,89,0.4)">(sin @)</span></label>
+      <div class="username-row">
+        <input type="text" class="edit-input" id="edit-username" placeholder="cazador_de_sombras" maxlength="24" oninput="checkUsername(this.value)">
+        <span class="username-status" id="username-status"></span>
+      </div>
+      <div class="edit-hint" id="username-hint">Solo letras, números y guiones bajos.</div>
+    </div>
+
+    <!-- Bio -->
+    <div class="edit-section">
+      <label class="edit-label">Bio</label>
+      <textarea class="edit-input edit-textarea" id="edit-bio" placeholder="Unas palabras sobre vos..." maxlength="200"></textarea>
+      <div class="edit-hint"><span id="bio-counter">0</span>/200</div>
+    </div>
+
+    <div class="edit-msg" id="edit-msg"></div>
+
+    <div class="edit-actions">
+      <button class="btn-cancel hover-target" onclick="closeEditModal()">Cancelar</button>
+      <button class="btn-save hover-target" id="save-btn" onclick="saveProfile()">GUARDAR</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════
+const SB_URL = 'https://xkntclywhhdtniosjuxo.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrbnRjbHl3aGhkdG5pb3NqdXhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMzExNDAsImV4cCI6MjA5MjcwNzE0MH0.aPAYF_rdsvCXzaLg_3bKTX7F7eoRGq1k_WL-r6NEdZ8';
+
+const sbAuth = window.supabase.createClient(SB_URL, SB_KEY, {
+  auth: { autoRefreshToken:true, persistSession:true, detectSessionInUrl:true, flowType:'pkce' }
+});
+
+// ── Avatares predeterminados (emojis temáticos) ──
+const PRESET_AVATARS = [
+  { id:'p1', emoji:'🦅' }, { id:'p2', emoji:'🐍' }, { id:'p3', emoji:'🦁' },
+  { id:'p4', emoji:'🦊' }, { id:'p5', emoji:'🌑' }, { id:'p6', emoji:'⚔️' },
+  { id:'p7', emoji:'🔱' }, { id:'p8', emoji:'🎭' }, { id:'p9', emoji:'💀' },
+  { id:'p10', emoji:'🌹' }, { id:'p11', emoji:'🔥' }, { id:'p12', emoji:'🌙' },
+];
+
+// ══════════════════════════════════════════════
+// ESTADO
+// ══════════════════════════════════════════════
+let currentUser   = null;
+let currentProfile= null;
+let selectedPreset= null;
+let newAvatarFile = null;
+let usernameTimer = null;
+let usernameValid = true;
+
+// ══════════════════════════════════════════════
+// CURSOR + PARTÍCULAS
+// ══════════════════════════════════════════════
+const cursorEl = document.getElementById('cursor');
+const ringEl   = document.getElementById('cursorRing');
+if (!('ontouchstart' in window)) {
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; });
+  (function track(){
+    rx+=(mx-rx)*0.28; ry+=(my-ry)*0.28;
+    cursorEl.style.left=mx+'px'; cursorEl.style.top=my+'px';
+    ringEl.style.left=rx+'px';   ringEl.style.top=ry+'px';
+    requestAnimationFrame(track);
+  })();
+  function attachHover(el){
+    el.addEventListener('mouseenter',()=>{ringEl.classList.add('hovered');cursorEl.classList.add('hovered');});
+    el.addEventListener('mouseleave',()=>{ringEl.classList.remove('hovered');cursorEl.classList.remove('hovered');});
+  }
+  document.querySelectorAll('.hover-target').forEach(attachHover);
+  window._attachHover = attachHover;
+}
+
+// Partículas
+(function(){
+  const c=document.getElementById('dust-canvas');
+  const ctx=c.getContext('2d');
+  function resize(){c.width=window.innerWidth;c.height=window.innerHeight;}
+  window.addEventListener('resize',resize);resize();
+  const pts=Array.from({length:300},()=>({
+    x:Math.random()*c.width,y:Math.random()*c.height,
+    size:2+Math.random()*3,
+    vx:(Math.random()-0.5)*0.1,vy:(Math.random()-0.5)*0.1,
+    opacity:0.3+Math.random()*0.4
+  }));
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    pts.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0||p.x>c.width)p.vx*=-1;
+      if(p.y<0||p.y>c.height)p.vy*=-1;
+      ctx.save();ctx.translate(p.x,p.y);
+      ctx.strokeStyle=`rgba(197,160,89,${p.opacity})`;
+      ctx.lineWidth=1;ctx.beginPath();
+      const r=p.size,ir=r/2.5;let rot=Math.PI/2*3;
+      ctx.moveTo(0,-r);
+      for(let i=0;i<5;i++){
+        ctx.lineTo(Math.cos(rot)*r,Math.sin(rot)*r);rot+=Math.PI/5;
+        ctx.lineTo(Math.cos(rot)*ir,Math.sin(rot)*ir);rot+=Math.PI/5;
+      }
+      ctx.closePath();ctx.stroke();ctx.restore();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// Scroll nav + progress
+window.addEventListener('scroll',()=>{
+  document.getElementById('main-nav').classList.toggle('scrolled',window.scrollY>50);
+  const d=document.documentElement;
+  document.getElementById('read-progress').style.width=
+    ((window.scrollY/(d.scrollHeight-d.clientHeight))*100)+'%';
+},{passive:true});
+
+// ══════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════
+function showToast(msg,isError=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast show'+(isError?' error':'');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ══════════════════════════════════════════════
+// REVEAL
+// ══════════════════════════════════════════════
+function initReveal(){
+  const obs=new IntersectionObserver(es=>{
+    es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');});
+  },{threshold:0.08});
+  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+}
+
+// ══════════════════════════════════════════════
+// CARGAR / CREAR PERFIL
+// ══════════════════════════════════════════════
+async function loadProfile(user){
+  currentUser = user;
+
+  // Intentar cargar perfil existente
+  const res = await fetch(
+    `${SB_URL}/rest/v1/profiles?id=eq.${user.id}&select=*`,
+    { headers:{ 'apikey':SB_KEY, 'Authorization':`Bearer ${user.access_token||SB_KEY}` } }
+  );
+  const data = await res.json();
+
+  if(Array.isArray(data) && data.length > 0){
+    currentProfile = data[0];
+  } else {
+    // Crear perfil vacío si no existe
+    const name  = user.user_metadata?.full_name || user.user_metadata?.name || '';
+    const photo = user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
+    const { data:session } = await sbAuth.auth.getSession();
+    const token = session?.session?.access_token || SB_KEY;
+    await fetch(`${SB_URL}/rest/v1/profiles`, {
+      method:'POST',
+      headers:{
+        'apikey':SB_KEY,'Authorization':`Bearer ${token}`,
+        'Content-Type':'application/json','Prefer':'return=representation'
+      },
+      body: JSON.stringify({ id:user.id, display_name:name, avatar_url:photo })
+    });
+    currentProfile = { id:user.id, display_name:name, avatar_url:photo, username:null, bio:null, avatar_preset:null };
+  }
+
+  renderProfile();
+}
+
+// ══════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════
+function getAvatarHTML(profile, size=128){
+  const s=`width:${size}px;height:${size}px;`;
+  if(profile.avatar_preset){
+    const p=PRESET_AVATARS.find(a=>a.id===profile.avatar_preset);
+    return `<div style="${s}border-radius:50%;background:var(--surface2);border:2px solid var(--border-strong);display:flex;align-items:center;justify-content:center;font-size:${size*0.42}px;">${p?p.emoji:'◈'}</div>`;
+  }
+  if(profile.avatar_url){
+    return `<img src="${profile.avatar_url}" style="${s}border-radius:50%;object-fit:cover;" alt="">`;
+  }
+  const initial = (profile.display_name||currentUser?.email||'A')[0].toUpperCase();
+  return `<div style="${s}border-radius:50%;background:var(--surface2);border:2px solid var(--border-strong);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:${size*0.4}px;color:var(--gold);opacity:0.6;">${initial}</div>`;
+}
+
+function renderProfile(){
+  const p = currentProfile;
+  const root = document.getElementById('profile-root');
+
+  const joinDate = p.created_at
+    ? new Date(p.created_at).toLocaleDateString('es-ES',{month:'long',year:'numeric'})
+    : '—';
+
+  const isOwn = currentUser && p.id === currentUser.id;
+
+  root.innerHTML = `
+    <div class="profile-hero reveal">
+      <div class="profile-hero-inner">
+        <div class="avatar-wrap">
+          <div class="avatar-ring" id="main-avatar-ring">
+            ${getAvatarHTML(p,128)}
+          </div>
+          ${isOwn ? `<div class="avatar-edit-btn hover-target" onclick="openEditModal()" title="Editar avatar">✎</div>` : ''}
+        </div>
+        <div class="profile-info">
+          ${p.username ? `<div class="profile-username">@${p.username}</div>` : ''}
+          <div class="profile-name">${p.display_name || (currentUser?.email?.split('@')[0] || 'Agente sin nombre')}</div>
+          <div class="profile-bio ${p.bio?'':'empty'}">${p.bio || (isOwn?'Sin bio todavía — añadí una describiendo quién sos.':'—')}</div>
+          <div class="profile-meta-row">
+            <div class="profile-meta-item">
+              <div class="profile-meta-label">Miembro desde</div>
+              <div class="profile-meta-value">${joinDate}</div>
+            </div>
+          </div>
+        </div>
+        ${isOwn ? `<button class="btn-edit-profile hover-target" onclick="openEditModal()">✎ Editar perfil</button>` : ''}
+      </div>
+    </div>
+
+    <div class="profile-content reveal">
+      <div class="profile-tabs">
+        <button class="profile-tab active hover-target" data-tab="activity" onclick="switchTab('activity',this)">Actividad</button>
+        <button class="profile-tab hover-target" data-tab="saved" onclick="switchTab('saved',this)">Guardados</button>
+      </div>
+      <div id="tab-content"></div>
+    </div>
+  `;
+
+  renderTab('activity');
+  initReveal();
+
+  if(window._attachHover){
+    root.querySelectorAll('.hover-target').forEach(window._attachHover);
+  }
+}
+
+function switchTab(name, btn){
+  document.querySelectorAll('.profile-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderTab(name);
+}
+
+function renderTab(name){
+  const el = document.getElementById('tab-content');
+  if(!el) return;
+  if(name==='activity'){
+    el.innerHTML = `
+      <div class="tab-empty reveal">
+        <div class="tab-empty-icon">◈</div>
+        <div class="tab-empty-title">Sin actividad aún</div>
+        <div class="tab-empty-sub">Aquí aparecerán los me gusta<br>y comentarios cuando los actives.</div>
+      </div>`;
+  } else if(name==='saved'){
+    el.innerHTML = `
+      <div class="tab-empty reveal">
+        <div class="tab-empty-icon">⊕</div>
+        <div class="tab-empty-title">Sin guardados</div>
+        <div class="tab-empty-sub">Guardá historias para encontrarlas<br>rápido desde aquí.</div>
+      </div>`;
+  }
+  initReveal();
+}
+
+// ══════════════════════════════════════════════
+// MODAL DE EDICIÓN
+// ══════════════════════════════════════════════
+function openEditModal(){
+  if(!currentProfile) return;
+  const p = currentProfile;
+
+  // Rellenar campos
+  document.getElementById('edit-name').value     = p.display_name || '';
+  document.getElementById('edit-username').value = p.username || '';
+  document.getElementById('edit-bio').value      = p.bio || '';
+  updateBioCounter();
+
+  // Preview avatar actual
+  const prev = document.getElementById('upload-preview');
+  if(p.avatar_url && !p.avatar_preset){
+    prev.innerHTML = `<img src="${p.avatar_url}" alt="">`;
+  } else {
+    prev.innerHTML = '◈';
+  }
+
+  // Presets
+  selectedPreset = p.avatar_preset || null;
+  newAvatarFile  = null;
+  renderPresets();
+
+  // Username hint
+  document.getElementById('username-hint').textContent = 'Solo letras, números y guiones bajos.';
+  document.getElementById('username-hint').className = 'edit-hint';
+  document.getElementById('username-status').textContent = '';
+  usernameValid = true;
+
+  document.getElementById('edit-msg').className = 'edit-msg';
+  document.getElementById('edit-modal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeEditModal(){
+  document.getElementById('edit-modal').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+function renderPresets(){
+  const grid = document.getElementById('avatar-presets');
+  grid.innerHTML = PRESET_AVATARS.map(p => `
+    <div class="preset-item hover-target ${selectedPreset===p.id?'selected':''}"
+         onclick="selectPreset('${p.id}')" title="${p.emoji}">
+      ${p.emoji}
+    </div>
+  `).join('');
+  if(window._attachHover){
+    grid.querySelectorAll('.hover-target').forEach(window._attachHover);
+  }
+}
+
+function selectPreset(id){
+  selectedPreset = selectedPreset===id ? null : id;
+  newAvatarFile  = null;
+  document.getElementById('upload-preview').innerHTML = '◈';
+  document.getElementById('avatar-file-input').value = '';
+  renderPresets();
+}
+
+function handleAvatarFile(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  if(file.size > 2*1024*1024){
+    showToast('La imagen no puede superar 2 MB.',true);
+    return;
+  }
+  newAvatarFile  = file;
+  selectedPreset = null;
+  renderPresets();
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const prev = document.getElementById('upload-preview');
+    prev.innerHTML = `<img src="${ev.target.result}" alt="">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function updateBioCounter(){
+  const val = document.getElementById('edit-bio').value;
+  document.getElementById('bio-counter').textContent = val.length;
+}
+document.getElementById('edit-bio').addEventListener('input', updateBioCounter);
+
+// ══════════════════════════════════════════════
+// VALIDAR USERNAME EN TIEMPO REAL
+// ══════════════════════════════════════════════
+async function checkUsername(val){
+  const hint   = document.getElementById('username-hint');
+  const status = document.getElementById('username-status');
+  clearTimeout(usernameTimer);
+
+  if(!val){ hint.textContent='Solo letras, números y guiones bajos.'; hint.className='edit-hint'; status.textContent=''; usernameValid=true; return; }
+  if(!/^[a-z0-9_]{3,24}$/.test(val)){
+    hint.textContent='3–24 caracteres. Solo letras minúsculas, números y _.'; hint.className='edit-hint error'; status.textContent='✕'; usernameValid=false; return;
+  }
+  if(val === currentProfile?.username){ hint.textContent='Este es tu ID actual.'; hint.className='edit-hint ok'; status.textContent='✓'; usernameValid=true; return; }
+
+  hint.textContent='Verificando...'; hint.className='edit-hint'; status.textContent='⋯'; usernameValid=false;
+
+  usernameTimer = setTimeout(async()=>{
+    const res = await fetch(`${SB_URL}/rest/v1/profiles?username=eq.${val}&select=id`,{headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`}});
+    const data = await res.json();
+    if(Array.isArray(data) && data.length>0){
+      hint.textContent='Este ID ya está en uso.'; hint.className='edit-hint error'; status.textContent='✕'; usernameValid=false;
+    } else {
+      hint.textContent='¡ID disponible!'; hint.className='edit-hint ok'; status.textContent='✓'; usernameValid=true;
+    }
+  },600);
+}
+
+// ══════════════════════════════════════════════
+// GUARDAR PERFIL
+// ══════════════════════════════════════════════
+async function saveProfile(){
+  if(!usernameValid){ showEditMsg('El ID elegido no está disponible.','error'); return; }
+
+  const btn = document.getElementById('save-btn');
+  btn.disabled=true; btn.classList.add('loading');
+
+  const { data:sessionData } = await sbAuth.auth.getSession();
+  const token = sessionData?.session?.access_token;
+  if(!token){ showEditMsg('Sesión expirada. Recargá la página.','error'); btn.disabled=false; btn.classList.remove('loading'); return; }
+
+  let finalAvatarUrl   = currentProfile.avatar_url;
+  let finalAvatarPreset= currentProfile.avatar_preset || null;
+
+  // Subir foto nueva a Supabase Storage
+  if(newAvatarFile){
+    const ext  = newAvatarFile.name.split('.').pop();
+    const path = `avatars/${currentUser.id}_${Date.now()}.${ext}`;
+    const up   = await fetch(`${SB_URL}/storage/v1/object/stories/${path}`,{
+      method:'POST',
+      headers:{'apikey':SB_KEY,'Authorization':`Bearer ${token}`,'Content-Type':newAvatarFile.type},
+      body:newAvatarFile
+    });
+    if(up.ok){
+      finalAvatarUrl    = `${SB_URL}/storage/v1/object/public/stories/${path}`;
+      finalAvatarPreset = null;
+    } else {
+      showEditMsg('Error al subir la imagen. Intentá de nuevo.','error');
+      btn.disabled=false; btn.classList.remove('loading'); return;
+    }
+  } else if(selectedPreset){
+    finalAvatarPreset = selectedPreset;
+    finalAvatarUrl    = null;
+  }
+
+  const username  = document.getElementById('edit-username').value.trim().toLowerCase() || null;
+  const payload = {
+    display_name: document.getElementById('edit-name').value.trim() || null,
+    username,
+    bio:          document.getElementById('edit-bio').value.trim() || null,
+    avatar_url:   finalAvatarUrl,
+    avatar_preset:finalAvatarPreset,
+    updated_at:   new Date().toISOString()
+  };
+
+  const res = await fetch(`${SB_URL}/rest/v1/profiles?id=eq.${currentUser.id}`,{
+    method:'PATCH',
+    headers:{
+      'apikey':SB_KEY,'Authorization':`Bearer ${token}`,
+      'Content-Type':'application/json','Prefer':'return=representation'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  btn.disabled=false; btn.classList.remove('loading');
+
+  if(res.ok){
+    const updated = await res.json();
+    currentProfile = Array.isArray(updated) ? updated[0] : {...currentProfile,...payload};
+    closeEditModal();
+    renderProfile();
+    showToast('Perfil actualizado ✓');
+  } else {
+    const err = await res.json().catch(()=>({}));
+    if(err?.code==='23505'){
+      showEditMsg('Ese ID ya está en uso. Elegí otro.','error');
+    } else {
+      showEditMsg('Error al guardar. Intentá de nuevo.','error');
+    }
+  }
+}
+
+function showEditMsg(text, type){
+  const el = document.getElementById('edit-msg');
+  el.textContent = text;
+  el.className = 'edit-msg '+type+' show';
+}
+
+// ══════════════════════════════════════════════
+// LISTENERS DEL MODAL
+// ══════════════════════════════════════════════
+document.getElementById('edit-close').addEventListener('click', closeEditModal);
+document.getElementById('edit-backdrop').addEventListener('click', closeEditModal);
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeEditModal(); });
+
+// ══════════════════════════════════════════════
+// INIT — Verificar sesión
+// ══════════════════════════════════════════════
+async function init(){
+  const { data:{ session } } = await sbAuth.auth.getSession();
+  if(!session){
+    document.getElementById('profile-root').innerHTML = `
+      <div class="state-screen">
+        <div class="state-title">Acceso restringido</div>
+        <div class="state-sub">Necesitás iniciar sesión para ver tu perfil</div>
+        <br>
+        <a href="index.html" style="font-family:'DM Mono',monospace;font-size:0.46rem;color:var(--gold);letter-spacing:0.2em;text-decoration:none;text-transform:uppercase;border:1px solid var(--border-strong);padding:12px 28px;margin-top:8px;display:inline-block;">← Volver al inicio</a>
+      </div>`;
+    return;
+  }
+  await loadProfile(session.user);
+}
+
+init();
+</script>
+</body>
+</html>
