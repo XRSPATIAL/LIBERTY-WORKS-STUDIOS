@@ -2025,13 +2025,14 @@ function initGSAP() {
 })();
 
 // ══════════════════════════════════════════════════
-//  ONE PERFECT STAR
-//  Minimalismo de lujo: una estrella, sin ruido
-//  Blanco puro aditivo · densidad por punta · GSAP
+//  LIBERTY IMAGE PARTICLES
+//  Lee liberty-icon.png → cada píxel blanco = partícula
+//  Opción A: figura se forma → respira → explota → renace
+//  Sin rotación · AdditiveBlending · UCL color
 // ══════════════════════════════════════════════════
-(function initParticleMorphing() {
-  if (typeof THREE === 'undefined') { setTimeout(initParticleMorphing, 80); return; }
-  if (typeof gsap  === 'undefined') { setTimeout(initParticleMorphing, 80); return; }
+(function initImageParticles() {
+  if (typeof THREE === 'undefined') { setTimeout(initImageParticles, 80); return; }
+  if (typeof gsap  === 'undefined') { setTimeout(initImageParticles, 80); return; }
 
   const heroEl = document.querySelector('.hero');
   const cv     = document.getElementById('particle-canvas');
@@ -2043,272 +2044,235 @@ function initGSAP() {
   renderer.setClearColor(0x000000, 0);
 
   const scene  = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(48, heroEl.offsetWidth / heroEl.offsetHeight, 0.1, 100);
-  camera.position.z = 4.0;
+  const camera = new THREE.PerspectiveCamera(50, heroEl.offsetWidth / heroEl.offsetHeight, 0.1, 100);
+  camera.position.z = 3.8;
 
-  // ── Construye la estrella con densidad variable ──
-  // Las puntas tienen acumulación de partículas (como luz real acumulada en el vértice)
-  function buildPerfectStar(N, outerR, innerR) {
-    const pos   = new Float32Array(N * 3);
-    const speed = new Float32Array(N);     // velocidad de cada partícula (para el "ray burst")
-    const phase = new Float32Array(N);     // fase inicial del pulso
+  // ── Samplear píxeles blancos de la imagen ──
+  function sampleImage(img, N, scale) {
+    const offscreen = document.createElement('canvas');
+    const RES = 220; // resolución del muestreo
+    offscreen.width  = RES;
+    offscreen.height = RES;
+    const ctx = offscreen.getContext('2d');
+    ctx.drawImage(img, 0, 0, RES, RES);
+    const pixels = ctx.getImageData(0, 0, RES, RES).data;
 
-    const SPIKES = 5;
-    const verts  = [];
-    for (let i = 0; i < SPIKES * 2; i++) {
-      const ang = (i / (SPIKES * 2)) * Math.PI * 2 - Math.PI / 2;
-      const r   = i % 2 === 0 ? outerR : innerR;
-      verts.push([Math.cos(ang) * r, Math.sin(ang) * r]);
-    }
-
-    // Longitudes de segmento
-    const segLens = [], segDirs = [];
-    let totalLen = 0;
-    for (let i = 0; i < verts.length; i++) {
-      const a = verts[i], b = verts[(i+1) % verts.length];
-      const l = Math.hypot(b[0]-a[0], b[1]-a[1]);
-      segLens.push(l);
-      segDirs.push([(b[0]-a[0])/l, (b[1]-a[1])/l]); // dirección unitaria
-      totalLen += l;
-    }
-
-    // Función de densidad: más partículas cerca de las puntas (t≈0 de cada segmento)
-    // Usamos distribución beta-like: más denso en extremos del segmento
-    for (let i = 0; i < N; i++) {
-      // Elegir segmento con probabilidad proporcional a su longitud
-      const target = Math.random() * totalLen;
-      let acc = 0, seg = 0;
-      while (seg < segLens.length - 1 && acc + segLens[seg] < target) {
-        acc += segLens[seg]; seg++;
+    // Recoger píxeles brillantes (blancos)
+    const bright = [];
+    for (let y = 0; y < RES; y++) {
+      for (let x = 0; x < RES; x++) {
+        const idx = (y * RES + x) * 4;
+        const r = pixels[idx], g = pixels[idx+1], b = pixels[idx+2], a = pixels[idx+3];
+        const brightness = (r + g + b) / 3;
+        if (brightness > 140 && a > 100) {
+          bright.push([
+            (x / RES - 0.5) *  scale,
+            -(y / RES - 0.5) * scale, // invertir Y
+            0
+          ]);
+        }
       }
-
-      // Dentro del segmento: distribución sesgada hacia los extremos
-      // pow(random, 0.3) concentra puntos al inicio del segmento
-      const raw = Math.random();
-      // Alternar sesgo: inicio o final del segmento = acumulación en vértices
-      const t = Math.random() > 0.5 ? Math.pow(raw, 0.28) : 1.0 - Math.pow(raw, 0.28);
-
-      const a  = verts[seg], b = verts[(seg+1) % verts.length];
-      const jx = (Math.random() - 0.5) * 0.009;
-      const jy = (Math.random() - 0.5) * 0.009;
-
-      pos[i*3]   = a[0] + (b[0]-a[0])*t + jx;
-      pos[i*3+1] = a[1] + (b[1]-a[1])*t + jy;
-      pos[i*3+2] = (Math.random()-0.5) * 0.04;
-
-      // Velocidad radial: cada partícula tiene su distancia al centro guardada
-      // Usada en "ray burst" para dispersarse en dirección radial
-      speed[i] = 0.7 + Math.random() * 1.3;
-      phase[i] = Math.random() * Math.PI * 2;
     }
-    return { pos, speed, phase };
-  }
 
-  // ── N partículas ──
-  const N = 8000;
-  const { pos: starPos, speed: starSpeed, phase: starPhase } = buildPerfectStar(N, 1.52, 0.60);
+    if (bright.length === 0) return null;
 
-  // Para la fase "ray burst": dispersar en dirección radial desde el centro
-  function buildRayBurst(N, basePos, speed) {
+    // Distribuir N partículas sobre los píxeles encontrados
     const pos = new Float32Array(N * 3);
     for (let i = 0; i < N; i++) {
-      const x = basePos[i*3], y = basePos[i*3+1];
-      const dist = Math.hypot(x, y) || 0.001;
-      const nx = x / dist, ny = y / dist; // dirección radial unitaria
-      const burst = speed[i] * (1.4 + Math.random() * 1.2);
-      pos[i*3]   = x + nx * burst;
-      pos[i*3+1] = y + ny * burst;
-      pos[i*3+2] = (Math.random() - 0.5) * 0.5;
+      const p = bright[Math.floor(Math.random() * bright.length)];
+      pos[i*3]   = p[0] + (Math.random()-0.5) * 0.008;
+      pos[i*3+1] = p[1] + (Math.random()-0.5) * 0.008;
+      pos[i*3+2] = (Math.random()-0.5) * 0.05;
     }
     return pos;
   }
 
-  const burstPos = buildRayBurst(N, starPos, starSpeed);
-
-  // ── Geometry ──
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('posA',     new THREE.BufferAttribute(starPos.slice(), 3));
-  geometry.setAttribute('posB',     new THREE.BufferAttribute(burstPos.slice(), 3));
-  geometry.setAttribute('position', new THREE.BufferAttribute(starPos.slice(), 3));
-
-  // Tamaños: inversamente proporcional a velocidad (partículas lentas = grandes, rápidas = pequeñas)
-  const aSizes = new Float32Array(N);
-  const aSeeds = new Float32Array(N);
-  for (let i = 0; i < N; i++) {
-    // Partículas rápidas son pequeñas y afiladas, lentas son destellos
-    const s = starSpeed[i]; // 0.7..2.0
-    aSizes[i] = s < 1.0 ? 0.55 + Math.random()*0.35        // lenta = destello medio
-              : s < 1.5 ? 0.18 + Math.random()*0.14        // media = microdot
-              :            0.10 + Math.random()*0.09;       // rápida = punto fino
-    aSeeds[i] = starPhase[i];
+  // Polvo disperso para el burst
+  function makeStardust(N, spread) {
+    const pos = new Float32Array(N * 3);
+    for (let i = 0; i < N; i++) {
+      const r   = Math.pow(Math.random(), 0.45) * spread;
+      const ang = Math.random() * Math.PI * 2;
+      pos[i*3]   = Math.cos(ang) * r;
+      pos[i*3+1] = Math.sin(ang) * r * 0.7;
+      pos[i*3+2] = (Math.random()-0.5) * 0.5;
+    }
+    return pos;
   }
-  geometry.setAttribute('aSize', new THREE.BufferAttribute(aSizes, 1));
-  geometry.setAttribute('aSeed', new THREE.BufferAttribute(aSeeds, 1));
 
-  // ── ShaderMaterial — blanco puro aditivo ──
-  const material = new THREE.ShaderMaterial({
-    transparent: true,
-    depthWrite:  false,
-    blending:    THREE.AdditiveBlending,
-    uniforms: {
-      uProgress: { value: 0.0 },
-      uTime:     { value: 0.0 },
-      uScale:    { value: renderer.getPixelRatio() * 58.0 },
-      uBright:   { value: 1.0 }, // multiplicador de brillo global
-    },
+  const N = 9000;
 
-    vertexShader: `
-      attribute vec3  posA;
-      attribute vec3  posB;
-      attribute float aSize;
-      attribute float aSeed;
-      uniform   float uProgress;
-      uniform   float uTime;
-      uniform   float uScale;
-      uniform   float uBright;
-      varying   float vAlpha;
-      varying   float vSize;
+  function build(figurePos) {
+    const dustPos = makeStardust(N, 2.8);
 
-      void main() {
-        // Power4 ease out para el ray burst: arranque brutal, frenada suave
-        float t = uProgress;
-        // in: power3   out: pow4 — burst sale rápido, colapso aterriza suave
-        float tOut = 1.0 - pow(1.0-t, 3.5);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('posA',     new THREE.BufferAttribute(figurePos.slice(), 3));
+    geometry.setAttribute('posB',     new THREE.BufferAttribute(dustPos, 3));
+    geometry.setAttribute('position', new THREE.BufferAttribute(figurePos.slice(), 3));
 
-        // Micro-vibración de las partículas en reposo (respiración viva)
-        float vibFreq = uTime * 1.8 + aSeed * 6.28;
-        float vib     = sin(vibFreq) * 0.005 * (1.0 - abs(t*2.0-1.0));
-        vec3  vibOff  = vec3(cos(aSeed*3.14)*vib, sin(aSeed*5.0)*vib, 0.0);
+    const seeds  = new Float32Array(N);
+    const aSizes = new Float32Array(N);
+    for (let i = 0; i < N; i++) {
+      seeds[i]  = Math.random();
+      const r   = Math.random();
+      aSizes[i] = r < 0.80 ? 0.10 + Math.random()*0.16
+                : r < 0.94 ? 0.38 + Math.random()*0.28
+                :             0.85 + Math.random()*0.9;
+    }
+    geometry.setAttribute('aSeed', new THREE.BufferAttribute(seeds,  1));
+    geometry.setAttribute('aSize', new THREE.BufferAttribute(aSizes, 1));
 
-        vec3 pos = mix(posA, posB, tOut) + vibOff;
+    const material = new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite:  false,
+      blending:    THREE.AdditiveBlending,
+      uniforms: {
+        uProgress: { value: 0.0 },
+        uTime:     { value: 0.0 },
+        uScale:    { value: renderer.getPixelRatio() * 52.0 },
+        uBright:   { value: 1.0 },
+      },
+      vertexShader: `
+        attribute vec3  posA;
+        attribute vec3  posB;
+        attribute float aSeed;
+        attribute float aSize;
+        uniform   float uProgress;
+        uniform   float uTime;
+        uniform   float uScale;
+        uniform   float uBright;
+        varying   float vAlpha;
+        varying   float vSize;
 
-        // Alpha: pleno en reposo, se atenúa a mitad del burst
-        float wave = sin(t * 3.14159);
-        vAlpha = (0.55 + 0.45 * (1.0 - aSeed * 0.3)) * (1.0 - wave * 0.55) * uBright;
-        vSize  = aSize;
+        void main() {
+          float t    = uProgress;
+          float tOut = 1.0 - pow(1.0-t, 3.2);
 
-        vec4 mvPos   = modelViewMatrix * vec4(pos, 1.0);
-        gl_PointSize = uScale * aSize * (1.0 / -mvPos.z);
-        gl_Position  = projectionMatrix * mvPos;
+          // Micro-vibración viva en reposo
+          float vib = sin(uTime * 1.6 + aSeed * 6.28) * 0.004 * (1.0 - t*2.0 > 0.0 ? 1.0-t*2.0 : 0.0);
+          vec3 vibOff = vec3(cos(aSeed*3.14)*vib, sin(aSeed*5.0)*vib, 0.0);
+
+          vec3 pos   = mix(posA, posB, tOut) + vibOff;
+          float wave = sin(t * 3.14159);
+          vAlpha = (0.55 + 0.45*(1.0 - aSeed*0.3)) * (1.0 - wave*0.55) * uBright;
+          vSize  = aSize;
+
+          vec4 mvPos   = modelViewMatrix * vec4(pos, 1.0);
+          gl_PointSize = uScale * aSize * (1.0 / -mvPos.z);
+          gl_Position  = projectionMatrix * mvPos;
+        }
+      `,
+      fragmentShader: `
+        varying float vAlpha;
+        varying float vSize;
+
+        void main() {
+          vec2  uv   = gl_PointCoord - 0.5;
+          float dist = length(uv) * 2.0;
+          if (dist > 1.0) discard;
+
+          float core  = 1.0 - smoothstep(0.0,  0.22, dist);
+          float inner = 1.0 - smoothstep(0.18, 0.55, dist);
+          float halo  = 1.0 - smoothstep(0.30, 0.85, dist);
+          float alpha = (core*0.97 + inner*0.45 + halo*0.18) * vAlpha;
+          if (alpha < 0.003) discard;
+
+          // UCL: blanco puro → azul glacial en el halo
+          vec3 white   = vec3(1.0, 1.0, 1.0);
+          vec3 glacial = vec3(0.52, 0.76, 1.0);
+          vec3 col     = mix(white, glacial, smoothstep(0.0, 0.5, dist));
+          // Destellos más blancos
+          col = mix(col, white, core * step(0.55, vSize) * 0.7);
+
+          gl_FragColor = vec4(col, alpha);
+        }
+      `,
+    });
+
+    const points = new THREE.Points(geometry, material);
+    scene.add(points);
+
+    // ── Ciclo Opción A: figura → polvo → figura ──
+    const state = { progress: 0, bright: 1.0 };
+    let   cycleCount = 0;
+
+    function doCycle() {
+      cycleCount++;
+      const isBig = cycleCount % 4 === 0; // cada 4 ciclos, explosión grande
+
+      const burstScale = isBig ? 1.0 : 0.35;
+      const scaledBurst = dustPos.slice();
+      if (!isBig) {
+        for (let i = 0; i < N; i++) {
+          const ox = figurePos[i*3], oy = figurePos[i*3+1];
+          scaledBurst[i*3]   = ox + (dustPos[i*3]  - ox) * burstScale;
+          scaledBurst[i*3+1] = oy + (dustPos[i*3+1]-oy) * burstScale;
+          scaledBurst[i*3+2] = dustPos[i*3+2] * burstScale;
+        }
       }
-    `,
-
-    fragmentShader: `
-      varying float vAlpha;
-      varying float vSize;
-
-      void main() {
-        vec2  uv   = gl_PointCoord - 0.5;
-        float dist = length(uv) * 2.0;
-        if (dist > 1.0) discard;
-
-        // Núcleo duro → halo suave
-        // Partículas grandes (destellos): halo más amplio = más bloom
-        float coreRadius = mix(0.18, 0.30, step(0.4, vSize));
-        float haloFade   = mix(0.45, 0.85, step(0.4, vSize));
-
-        float core  = 1.0 - smoothstep(0.0, coreRadius, dist);
-        float inner = 1.0 - smoothstep(coreRadius, 0.55, dist);
-        float halo  = 1.0 - smoothstep(0.30, haloFade, dist);
-
-        float alpha = (core * 0.98 + inner * 0.52 + halo * 0.18) * vAlpha;
-        if (alpha < 0.003) discard;
-
-        // BLANCO PURO — sin tinte, máximo contraste con el negro
-        // Las partículas más grandes tienen un micro-tinte azul glacial en el halo
-        // para simular aberración cromática de lente real
-        float aberration = smoothstep(0.35, 0.95, dist) * step(0.45, vSize) * 0.45;
-        vec3 white   = vec3(1.0, 1.0, 1.0);
-        vec3 abColor = vec3(0.62, 0.82, 1.0); // micro tinte aberración
-        vec3 col     = mix(white, abColor, aberration);
-
-        gl_FragColor = vec4(col, alpha);
-      }
-    `,
-  });
-
-  const points = new THREE.Points(geometry, material);
-  scene.add(points);
-
-  // ── Ciclo: estrella → ray burst → regresa ──
-  // Dos variantes: burst pequeño (respiración) y burst grande (explosión)
-  const state = { progress: 0, bright: 1.0 };
-  let burstCount = 0;
-
-  function doBurst() {
-    burstCount++;
-    // Cada 3 bursts, hacer uno grande dramático
-    const isBig = burstCount % 3 === 0;
-    const scale = isBig ? 1.0 : 0.45;
-
-    // Ajustar posB según intensidad
-    const scaledBurst = burstPos.slice();
-    if (!isBig) {
-      for (let i = 0; i < N; i++) {
-        const ox = starPos[i*3], oy = starPos[i*3+1];
-        scaledBurst[i*3]   = ox + (burstPos[i*3]  - ox) * scale;
-        scaledBurst[i*3+1] = oy + (burstPos[i*3+1]-oy) * scale;
-        scaledBurst[i*3+2] = burstPos[i*3+2] * scale;
-      }
-      geometry.getAttribute('posB').array.set(scaledBurst);
+      geometry.getAttribute('posA').array.set(figurePos);
+      geometry.getAttribute('posB').array.set(isBig ? dustPos : scaledBurst);
+      geometry.getAttribute('posA').needsUpdate = true;
       geometry.getAttribute('posB').needsUpdate = true;
-    } else {
-      geometry.getAttribute('posB').array.set(burstPos);
-      geometry.getAttribute('posB').needsUpdate = true;
+      state.progress = 0;
+
+      gsap.timeline()
+        .to(state, {
+          progress: 1,
+          duration: isBig ? 2.2 : 1.0,
+          ease: 'power2.in',
+          onUpdate: () => { material.uniforms.uProgress.value = state.progress; },
+        })
+        .to({}, { duration: isBig ? 0.4 : 0.15 })
+        .to(state, {
+          progress: 0,
+          duration: isBig ? 4.0 : 2.0,
+          ease: 'power3.out',
+          onUpdate: () => { material.uniforms.uProgress.value = state.progress; },
+          onComplete: () => {
+            // Pausa larga con figura viva antes del siguiente ciclo
+            setTimeout(doCycle, isBig ? 5000 : 3200);
+          },
+        });
     }
 
-    geometry.getAttribute('posA').array.set(starPos);
-    geometry.getAttribute('posA').needsUpdate = true;
-    state.progress = 0;
+    // Arrancar tras loader
+    setTimeout(doCycle, 2800);
 
-    // Burst outward
-    gsap.timeline()
-      .to(state, {
-        progress: 1,
-        duration: isBig ? 1.8 : 1.1,
-        ease: 'power2.in',
-        onUpdate: () => { material.uniforms.uProgress.value = state.progress; },
-      })
-      // Pausa en dispersión
-      .to({}, { duration: isBig ? 0.35 : 0.18 })
-      // Colapso de vuelta — más dramático en big
-      .to(state, {
-        progress: 0,
-        duration: isBig ? 3.2 : 1.6,
-        ease: 'power3.out',
-        onUpdate: () => { material.uniforms.uProgress.value = state.progress; },
-        onComplete: () => {
-          // Pausa con estrella viva antes del siguiente burst
-          setTimeout(doBurst, isBig ? 3200 : 1800);
-        },
-      });
+    const clock = new THREE.Clock();
+    (function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+      material.uniforms.uTime.value  = t;
+      material.uniforms.uBright.value = state.bright;
+      // SIN rotación — la Estatua es estática y solemne
+      renderer.render(scene, camera);
+    })();
+
+    window.addEventListener('resize', () => {
+      const w = heroEl.offsetWidth, h = heroEl.offsetHeight;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      material.uniforms.uScale.value = renderer.getPixelRatio() * 52.0;
+    });
   }
 
-  // Arrancar después del loader
-  setTimeout(doBurst, 2600);
-
-  // ── Render loop ──
-  const clock = new THREE.Clock();
-  (function animate() {
-    requestAnimationFrame(animate);
-    const t = clock.getElapsedTime();
-    material.uniforms.uTime.value = t;
-    material.uniforms.uBright.value = state.bright;
-    // Rotación muy lenta — 1 vuelta cada ~70 segundos
-    points.rotation.z = t * 0.009;
-    // Cabeceo suavísimo para sensación 3D
-    points.rotation.x = Math.sin(t * 0.07) * 0.04;
-    renderer.render(scene, camera);
-  })();
-
-  // ── Resize ──
-  window.addEventListener('resize', () => {
-    const w = heroEl.offsetWidth, h = heroEl.offsetHeight;
-    renderer.setSize(w, h);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    material.uniforms.uScale.value = renderer.getPixelRatio() * 58.0;
-  });
+  // ── Cargar imagen ──
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const figurePos = sampleImage(img, N, 3.0);
+    if (figurePos) {
+      build(figurePos);
+    } else {
+      console.warn('[LWS] No bright pixels found in liberty-icon.png');
+    }
+  };
+  img.onerror = () => {
+    console.warn('[LWS] liberty-icon.png not found — particles disabled');
+  };
+  img.src = 'liberty-icon.png';
 })();
 
 // ══════════════════════════════════════════════════
@@ -2497,4 +2461,4 @@ _sbAuth?.auth?.onAuthStateChange((event, session) => {
 });
 </script>
 </body>
-</html> 
+</html>
