@@ -638,42 +638,50 @@ footer{padding:80px 72px;border-top:1px solid var(--border);display:flex;justify
 /* Imagen con filtro GTA: alto contraste, blancos crema/plata, sombras negras puras */
 #liberty-statue {
   position: absolute;
-  bottom: 0;
-  right: 6%;
-  width: clamp(260px, 36vw, 580px);
-  height: auto;
-  transform-origin: bottom center;
-  /* Filtro GTA: contraste brutal + viñeta plata/crema */
+  bottom: -2%;
+  right: -2%;
+  /* Grande: cubre desde el suelo hasta casi el techo del hero */
+  height: 96%;
+  width: auto;
+  max-width: 60vw;
+  min-height: 520px;
+  transform-origin: bottom right;
+  /* Filtro GTA: contraste brutal, blancos crema/plata, sombras negras puras */
   filter:
-    contrast(1.85)
-    brightness(0.92)
-    saturate(0.15)
-    sepia(0.12);
-  /* Tono crema/plata en las luces: mezcla suave */
+    contrast(1.9)
+    brightness(0.88)
+    saturate(0.1)
+    sepia(0.08);
   mix-blend-mode: normal;
   opacity: 0;
   will-change: transform, filter, opacity;
   user-select: none;
   -webkit-user-drag: none;
-}
-
-/* Pseudo-overlay para viñeta crema sobre la imagen */
-#liberty-statue-wrap::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  right: 6%;
-  width: clamp(260px, 36vw, 580px);
-  height: 100%;
-  background: linear-gradient(
+  /* Integración con el fondo: fade en los bordes via mask */
+  -webkit-mask-image: linear-gradient(
+    to left,
+    black 55%,
+    rgba(0,0,0,0.6) 80%,
+    transparent 100%
+  ), linear-gradient(
     to top,
-    rgba(8,8,8,0.55) 0%,
-    transparent 35%,
-    transparent 75%,
-    rgba(8,8,8,0.12) 100%
+    black 80%,
+    rgba(0,0,0,0.3) 95%,
+    transparent 100%
   );
-  pointer-events: none;
-  z-index: 3;
+  -webkit-mask-composite: destination-in;
+  mask-image: linear-gradient(
+    to left,
+    black 55%,
+    rgba(0,0,0,0.6) 80%,
+    transparent 100%
+  ), linear-gradient(
+    to top,
+    black 80%,
+    rgba(0,0,0,0.3) 95%,
+    transparent 100%
+  );
+  mask-composite: intersect;
 }
 
 /* Flash de exposición blanca */
@@ -687,27 +695,38 @@ footer{padding:80px 72px;border-top:1px solid var(--border);display:flex;justify
   mix-blend-mode: screen;
 }
 
-/* Canvas de glitch — superpuesto sobre la imagen */
+/* Canvas de glitch — superpuesto exactamente sobre la imagen */
 #liberty-glitch-canvas {
   position: absolute;
-  bottom: 0;
-  right: 6%;
-  width: clamp(260px, 36vw, 580px);
-  height: 100%;
+  bottom: -2%;
+  right: -2%;
+  height: 96%;
+  width: auto;
+  min-height: 520px;
   pointer-events: none;
   z-index: 4;
   opacity: 0;
 }
 
 @media(max-width:960px){
-  #liberty-statue { right: -2%; width: clamp(200px, 55vw, 340px); }
-  #liberty-statue-wrap::after { right: -2%; width: clamp(200px, 55vw, 340px); }
-  #liberty-glitch-canvas { right: -2%; width: clamp(200px, 55vw, 340px); }
+  #liberty-statue {
+    height: 70%;
+    max-width: 70vw;
+    right: -4%;
+    bottom: 0;
+  }
+  #liberty-glitch-canvas { height: 70%; right: -4%; }
 }
 @media(max-width:600px){
-  #liberty-statue { right: 50%; transform: translateX(50%); width: 72vw; }
-  #liberty-statue-wrap::after { right: 0; width: 100%; }
-  #liberty-glitch-canvas { right: 50%; transform: translateX(50%); width: 72vw; }
+  #liberty-statue {
+    height: 55%;
+    max-width: 85vw;
+    right: 50%;
+    transform: translateX(50%);
+    -webkit-mask-image: linear-gradient(to top, black 70%, transparent 100%);
+    mask-image: linear-gradient(to top, black 70%, transparent 100%);
+  }
+  #liberty-glitch-canvas { display: none; }
 }
 
 @media(max-width:960px){
@@ -886,7 +905,7 @@ footer{padding:80px 72px;border-top:1px solid var(--border);display:flex;justify
 
 <section class="hero">
   <div id="liberty-statue-wrap">
-    <img id="liberty-statue" src="https://raw.githubusercontent.com/libertywks/libertywks.github.io/main/liberty_icon.png" alt="Liberty Statue" draggable="false">
+    <img id="liberty-statue" src="liberty-icon.png" alt="Liberty Statue" draggable="false">
     <div id="liberty-flash"></div>
     <canvas id="liberty-glitch-canvas"></canvas>
   </div>
@@ -2125,60 +2144,62 @@ function initGSAP() {
   const gc     = document.getElementById('liberty-glitch-canvas');
   if (!img) return;
 
-  // ── 1. ANIMACIÓN DE ENTRADA — ScrollTrigger + zoom agresivo ──
+  // ── 1. ANIMACIÓN DE ENTRADA — dispara al cargar (hero visible desde inicio) ──
   gsap.registerPlugin(ScrollTrigger);
 
-  // Estado inicial: invisible, escalada desde abajo
-  gsap.set(img, { autoAlpha: 0, scale: 1.22, y: 40, filter: 'contrast(1.85) brightness(0.92) saturate(0.15) sepia(0.12)' });
+  // Estado inicial: invisible, escalada hacia abajo
+  gsap.set(img, { autoAlpha: 0, scale: 1.28, y: 60, transformOrigin: 'bottom right' });
   gsap.set(flash, { opacity: 0 });
 
-  const entranceTL = gsap.timeline({
-    scrollTrigger: {
-      trigger: '.hero',
-      start: 'top 95%',
-      toggleActions: 'play none none none',
-      once: true,
-    }
-  });
+  // La página arranca directo en el hero — disparar tras breve delay de carga
+  function fireEntrance() {
+    const entranceTL = gsap.timeline({ delay: 0.25 });
 
-  entranceTL
-    // Flash blanco — destello de exposición
-    .to(flash, {
-      opacity: 1,
-      duration: 0.06,
-      ease: 'none',
-    })
-    // Flash baja rápido
-    .to(flash, {
-      opacity: 0,
-      duration: 0.28,
-      ease: 'power3.out',
-    }, '-=0.02')
-    // Imagen aparece — zoom-in agresivo hacia reposo
-    .to(img, {
-      autoAlpha: 1,
-      scale: 1,
-      y: 0,
-      duration: 0.72,
-      ease: 'power4.out',
-      onStart() {
-        // Segundo destello leve al aparecer la imagen
-        gsap.fromTo(flash,
-          { opacity: 0.55 },
-          { opacity: 0, duration: 0.38, ease: 'power2.out' }
-        );
-      }
-    }, '-=0.22')
-    // Micro-bounce final — sensación de peso
-    .to(img, {
-      scale: 1.018,
-      duration: 0.18,
-      ease: 'power1.inOut',
-      yoyo: true,
-      repeat: 1,
-    }, '-=0.12')
-    // Llamar glitch loop al terminar entrada
-    .call(startGlitchLoop);
+    entranceTL
+      // Flash blanco — destello de exposición
+      .to(flash, {
+        opacity: 1,
+        duration: 0.06,
+        ease: 'none',
+      })
+      // Flash baja rápido
+      .to(flash, {
+        opacity: 0,
+        duration: 0.32,
+        ease: 'power3.out',
+      }, '-=0.02')
+      // Imagen sube con zoom-in agresivo
+      .to(img, {
+        autoAlpha: 1,
+        scale: 1,
+        y: 0,
+        duration: 0.85,
+        ease: 'power4.out',
+        onStart() {
+          gsap.fromTo(flash,
+            { opacity: 0.45 },
+            { opacity: 0, duration: 0.42, ease: 'power2.out' }
+          );
+        }
+      }, '-=0.26')
+      // Micro-bounce final — sensación de peso real
+      .to(img, {
+        scale: 1.012,
+        duration: 0.16,
+        ease: 'power1.inOut',
+        yoyo: true,
+        repeat: 1,
+      }, '-=0.08')
+      .call(startGlitchLoop);
+  }
+
+  // Esperar a que la imagen cargue para disparar
+  if (img.complete && img.naturalWidth) {
+    fireEntrance();
+  } else {
+    img.addEventListener('load', fireEntrance, { once: true });
+    img.addEventListener('error', () => console.warn('[LWS] liberty-icon.png no encontrado'), { once: true });
+  }
 
   // ── 2. GLITCH — desplazamiento aleatorio de canales RGB ──
   let glitchRAF = null;
