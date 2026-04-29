@@ -14,7 +14,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
-
 <style>
 :root {
   --gold-primary: #b8bec8;
@@ -626,109 +625,6 @@ footer{padding:80px 72px;border-top:1px solid var(--border);display:flex;justify
 .auth-forgot a{font-family:'DM Mono',monospace;font-size:0.37rem;letter-spacing:0.14em;color:rgba(184,190,200,0.35);text-decoration:none;cursor:pointer;transition:0.3s;}
 .auth-forgot a:hover{color:var(--gold-primary);}
 
-/* ══ LIBERTY STATUE — Rockstar GTA Aesthetic ══ */
-#liberty-statue-wrap {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-/* Imagen con filtro GTA: alto contraste, blancos crema/plata, sombras negras puras */
-#liberty-statue {
-  position: absolute;
-  bottom: -2%;
-  right: -2%;
-  /* Grande: cubre desde el suelo hasta casi el techo del hero */
-  height: 96%;
-  width: auto;
-  max-width: 60vw;
-  min-height: 520px;
-  transform-origin: bottom right;
-  /* Filtro GTA: contraste brutal, blancos crema/plata, sombras negras puras */
-  filter:
-    contrast(1.9)
-    brightness(0.88)
-    saturate(0.1)
-    sepia(0.08);
-  mix-blend-mode: normal;
-  opacity: 0;
-  will-change: transform, filter, opacity;
-  user-select: none;
-  -webkit-user-drag: none;
-  /* Integración con el fondo: fade en los bordes via mask */
-  -webkit-mask-image: linear-gradient(
-    to left,
-    black 55%,
-    rgba(0,0,0,0.6) 80%,
-    transparent 100%
-  ), linear-gradient(
-    to top,
-    black 80%,
-    rgba(0,0,0,0.3) 95%,
-    transparent 100%
-  );
-  -webkit-mask-composite: destination-in;
-  mask-image: linear-gradient(
-    to left,
-    black 55%,
-    rgba(0,0,0,0.6) 80%,
-    transparent 100%
-  ), linear-gradient(
-    to top,
-    black 80%,
-    rgba(0,0,0,0.3) 95%,
-    transparent 100%
-  );
-  mask-composite: intersect;
-}
-
-/* Flash de exposición blanca */
-#liberty-flash {
-  position: absolute;
-  inset: 0;
-  background: #f5f3ee;
-  opacity: 0;
-  pointer-events: none;
-  z-index: 10;
-  mix-blend-mode: screen;
-}
-
-/* Canvas de glitch — superpuesto exactamente sobre la imagen */
-#liberty-glitch-canvas {
-  position: absolute;
-  bottom: -2%;
-  right: -2%;
-  height: 96%;
-  width: auto;
-  min-height: 520px;
-  pointer-events: none;
-  z-index: 4;
-  opacity: 0;
-}
-
-@media(max-width:960px){
-  #liberty-statue {
-    height: 70%;
-    max-width: 70vw;
-    right: -4%;
-    bottom: 0;
-  }
-  #liberty-glitch-canvas { height: 70%; right: -4%; }
-}
-@media(max-width:600px){
-  #liberty-statue {
-    height: 55%;
-    max-width: 85vw;
-    right: 50%;
-    transform: translateX(50%);
-    -webkit-mask-image: linear-gradient(to top, black 70%, transparent 100%);
-    mask-image: linear-gradient(to top, black 70%, transparent 100%);
-  }
-  #liberty-glitch-canvas { display: none; }
-}
-
 @media(max-width:960px){
   nav{padding:24px 28px;}nav.scrolled{padding:18px 28px;}
   .hero{padding:0 28px 72px;}
@@ -904,11 +800,48 @@ footer{padding:80px 72px;border-top:1px solid var(--border);display:flex;justify
 </nav>
 
 <section class="hero">
-  <div id="liberty-statue-wrap">
-    <img id="liberty-statue" src="liberty-icon.png" alt="Liberty Statue" draggable="false">
-    <div id="liberty-flash"></div>
-    <canvas id="liberty-glitch-canvas"></canvas>
+  <!-- VIDEO de fondo (oculto por defecto, se activa desde admin) -->
+  <video id="hero-video" autoplay muted loop playsinline
+    style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;display:none;opacity:0;transition:opacity 0.8s;">
+  </video>
+  <div id="hero-video-overlay" style="position:absolute;inset:0;z-index:2;background:rgba(0,0,0,0.52);display:none;pointer-events:none;"></div>
+
+  <!-- IMAGEN ROCKSTAR — liberty-icon.png con estética GTA -->
+  <div id="hero-img-wrap" style="position:absolute;inset:0;z-index:1;overflow:hidden;will-change:transform;">
+    <img id="hero-img" src="liberty-icon.png" alt=""
+      style="width:100%;height:115%;object-fit:cover;object-position:center top;
+             display:block;will-change:transform;
+             /* Filtro alto contraste estilo Rockstar/GTA */
+             filter:contrast(1.55) brightness(0.88) saturate(0.72) sepia(0.12);
+             /* Tinte crema/plata sobre las luces */
+             mix-blend-mode:normal;
+             transform-origin:center center;">
+    <!-- Overlay de color Rockstar — gradient warm-to-black desde abajo -->
+    <div style="position:absolute;inset:0;
+      background:linear-gradient(
+        to bottom,
+        rgba(0,0,0,0.18) 0%,
+        rgba(0,0,0,0.05) 35%,
+        rgba(0,0,0,0.45) 70%,
+        rgba(0,0,0,0.88) 100%
+      );pointer-events:none;z-index:2;"></div>
+    <!-- Tinte crema/plata para los blancos -->
+    <div id="hero-tint" style="position:absolute;inset:0;
+      background:rgba(235,225,210,0.06);
+      mix-blend-mode:screen;pointer-events:none;z-index:3;"></div>
+    <!-- Flash de exposición para la entrada -->
+    <div id="hero-flash" style="position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:10;"></div>
+    <!-- Canales RGB para el glitch -->
+    <div id="glitch-r" style="position:absolute;inset:0;background:url('liberty-icon.png') center top/cover no-repeat;
+      filter:contrast(1.55) brightness(0.88) saturate(0.72) sepia(0.12);
+      opacity:0;mix-blend-mode:screen;pointer-events:none;z-index:4;
+      will-change:transform;"></div>
+    <div id="glitch-b" style="position:absolute;inset:0;background:url('liberty-icon.png') center top/cover no-repeat;
+      filter:contrast(1.55) brightness(0.88) saturate(0.72) sepia(0.12);
+      opacity:0;mix-blend-mode:screen;pointer-events:none;z-index:4;
+      will-change:transform;"></div>
   </div>
+
   <div class="hero-edge"></div>
   <div class="hero-scan" id="hero-scan"></div>
   <div class="hero-content">
@@ -1593,6 +1526,33 @@ function cookieDecide(accepted) {
   }
 }
 
+// ── HERO MODE — video o partículas, configurable desde admin ──
+async function initHeroMode() {
+  try {
+    const { data } = await _sbAuth
+      .from('site_settings')
+      .select('hero_mode, hero_video_url')
+      .eq('id', 1)
+      .maybeSingle();
+
+    const mode     = data?.hero_mode     || 'particles';
+    const videoUrl = data?.hero_video_url || '';
+
+    if (mode === 'video' && videoUrl) {
+      const vid     = document.getElementById('hero-video');
+      const overlay = document.getElementById('hero-video-overlay');
+      const canvas  = document.getElementById('particle-canvas');
+      if (vid) {
+        vid.src = videoUrl;
+        vid.style.display = 'block';
+        vid.addEventListener('canplay', () => { vid.style.opacity = '1'; }, { once: true });
+      }
+      if (overlay) overlay.style.display = 'block';
+      if (canvas)  canvas.style.display  = 'none';
+    }
+  } catch(e) {} // sin tabla → partículas por defecto
+}
+
 // ── FRASES MÍSTICAS ──
 const phrases=['TODA HISTORIA ES UNA ESCENA DEL CRIMEN','EL SILENCIO ES EL MEJOR TESTIGO','LAS BALAS NO BORRAN LOS PECADOS','LAS PALABRAS NO PIDEN PERMISO','LA VERDAD NO TIENE AMIGOS, SOLO CÓMPLICES.','UNA PALABRA BIEN DISPARADA AHORRA UN CARGADOR.','EL PASADO NUNCA MUERE; SOLO ESPERA A QUE TE DES LA VUELTA.','LA JUSTICIA ES UN LUJO QUE NO LLEGA A ESTOS CÓDIGOS POSTALES.','EL ÉXITO ES SOLO UN ERROR DEL DESTINO.','SANGRE FRESCA SOBRE CEMENTO VIEJO.','CADA SECRETO TIENE UN PRECIO QUE NADIE QUIERE PAGAR.','EL PAPEL AGUANTA TODO; LA CALLE NO PERDONA NADA.','LAS PROMESAS SE ESCRIBEN EN ARENA Y SE COBRAN EN PLOMO.','LA INOCENCIA ES EL PRIMER GASTO INNECESARIO.','HABLAR ES GRATIS; QUE TE CREAN CUESTA LA VIDA.','EL ASFALTO ES EL ÚNICO CONFESOR QUE NO TE JUZGA.','CERO PIEDAD. CERO TESTIGOS.','LAS CICATRICES SON EL MAPA DE LO QUE INTENTASTE OLVIDAR.','NO BUSCAMOS CULPABLES, BUSCAMOS SOLUCIONES DEFINITIVAS.','EN ESTA CIUDAD, EL SOL ES UN TESTIGO QUE SE VENDE AL MEJOR POSTOR.','LA LEALTAD ES UNA DEUDA QUE SE LIQUIDA EN EFECTIVO.','EL MIEDO ES EL ÚNICO LENGUAJE QUE NO NECESITA TRADUCCIÓN.','NO HAY GLORIA EN EL BARRO, SOLO SUPERVIVENCIA.','LA NOCHE TIENE MIL OJOS Y TODOS SON DELATORES.','LA MEMORIA ES UN RASTRO DE PÓLVORA EN UN DÍA DE LLUVIA.','LOS FINALES FELICES SON PARA QUIENES PUEDEN PAGAR LA FIANZA.','NADIE ES INOCENTE DESPUÉS DE LA MEDIANOCHE.','EL SILENCIO ES EL GRITO MÁS FUERTE DE LOS QUE YA NO ESTÁN.','NO HAY PERDÓN SIN FACTURA, NI PECADO SIN RECIBO.','LA CALLE NO TE ENSEÑA A VIVIR, TE ENSEÑA A NO MORIR.','EL PODER ES UN ARMA QUE SIEMPRE APUNTA A QUIEN LA EMPUÑA.','LAS MENTIRAS BIEN DICHAS SUENAN A VERDAD BAJO LA LUZ ADECUADA.','LA MORAL ES UN ESTORBO CUANDO EL HAMBRE APRIETA EL GATILLO.','EL DESTINO NO AVISA; SIMPLEMENTE TE COBRA LA ENTRADA.','LA REDENCIÓN ES UN CUENTO QUE SE INVENTARON LOS VERDUGOS.','AQUÍ LOS SUEÑOS SE EMPEÑAN PARA PAGAR EL DESAYUNO.','CADA BALA TIENE UN NOMBRE Y CADA NOMBRE UNA CUENTA PENDIENTE.','LA CIUDAD ES UNA TRAMPA DE ACERO CON AIRE ACONDICIONADO.','EL HONOR ES UN LUJO QUE SOLO LOS MUERTOS PUEDEN PERMITIRSE.','NO PIDAS TIEMPO; EL TIEMPO ES LO ÚNICO QUE NO SE ROBA.','LAS HUELLAS DACTILARES NO CUENTAN TODA LA HISTORIA.','EL CEMENTO NO SIENTE LÁSTIMA, SOLO FRÍO.','LA AMBICIÓN ES EL CAMINO MÁS CORTO HACIA UNA FOSA COMÚN.','UNA VEZ QUE CRUZAS LA LÍNEA, LA LÍNEA ES LO ÚNICO QUE TE SOSTIENE.'];
 let pIdx = 0;
@@ -1971,7 +1931,11 @@ _sbAuth.auth.onAuthStateChange((event, session) => {
   updateNavAuth(session?.user || null);
   if (event === 'SIGNED_IN') closeAuthModal();
 });
-_sbAuth.auth.getSession().then(({ data: { session } }) => updateNavAuth(session?.user || null));
+_sbAuth.auth.getSession().then(({ data: { session } }) => {
+  updateNavAuth(session?.user || null);
+  if (session?.user) loadUserReactions(session.user.id);
+  initHeroMode();
+});
 
 window.openAuthModal = openAuthModal;
 window.handleLogout  = handleLogout;
@@ -2132,185 +2096,150 @@ function initGSAP() {
 })();
 
 // ══════════════════════════════════════════════════
-//  LIBERTY STATUE — Rockstar GTA Aesthetic
-//  Entrada GSAP: zoom-in agresivo + flash exposición
-//  Efecto constante: glitch RGB + camera wobble
+//  ROCKSTAR HERO — GSAP  (skill: gsap-core)
+//  1. Zoom-in agresivo + flash de exposición
+//  2. Camera shake sutil y continuo
+//  3. Glitch RGB aleatorio no bloqueante
+//  Performante: solo transforms en GPU, will-change
+//  gsap.matchMedia() respeta prefers-reduced-motion
 // ══════════════════════════════════════════════════
-(function initRockstarStatue() {
-  if (typeof gsap === 'undefined') { setTimeout(initRockstarStatue, 80); return; }
+(function initRockstarHero() {
+  if (typeof gsap === 'undefined') { setTimeout(initRockstarHero, 60); return; }
 
-  const img    = document.getElementById('liberty-statue');
-  const flash  = document.getElementById('liberty-flash');
-  const gc     = document.getElementById('liberty-glitch-canvas');
-  if (!img) return;
+  const wrap  = document.getElementById('hero-img-wrap');
+  const img   = document.getElementById('hero-img');
+  const flash = document.getElementById('hero-flash');
+  const glitchR = document.getElementById('glitch-r');
+  const glitchB = document.getElementById('glitch-b');
+  if (!wrap || !img) return;
 
-  // ── 1. ANIMACIÓN DE ENTRADA — dispara al cargar (hero visible desde inicio) ──
-  gsap.registerPlugin(ScrollTrigger);
+  // ── GSAP defaults siguiendo el skill ──
+  gsap.defaults({ overwrite: 'auto' });
 
-  // Estado inicial: invisible, escalada hacia abajo
-  gsap.set(img, { autoAlpha: 0, scale: 1.28, y: 60, transformOrigin: 'bottom right' });
-  gsap.set(flash, { opacity: 0 });
+  // ── gsap.matchMedia() — respeta prefers-reduced-motion ──
+  const mm = gsap.matchMedia();
 
-  // La página arranca directo en el hero — disparar tras breve delay de carga
-  function fireEntrance() {
-    const entranceTL = gsap.timeline({ delay: 0.25 });
+  mm.add({
+    full:        '(prefers-reduced-motion: no-preference)',
+    reduced:     '(prefers-reduced-motion: reduce)',
+  }, (ctx) => {
+    const { full } = ctx.conditions;
 
-    entranceTL
-      // Flash blanco — destello de exposición
-      .to(flash, {
-        opacity: 1,
-        duration: 0.06,
-        ease: 'none',
-      })
+    if (!full) {
+      // Sin movimiento: solo mostrar la imagen estática
+      gsap.set(img, { scale: 1, filter: 'contrast(1.55) brightness(0.88) saturate(0.72) sepia(0.12)' });
+      return;
+    }
+
+    // ────────────────────────────────────────────────
+    //  1. ENTRADA — Timeline GSAP (no delay chaining)
+    //     Zoom agresivo + flash de exposición blanca
+    // ────────────────────────────────────────────────
+    const enterTl = gsap.timeline({ delay: 0.1 });
+
+    // Estado inicial: muy zoom y sobreexpuesto
+    gsap.set(img,   { scale: 1.22, autoAlpha: 0 });
+    gsap.set(flash, { autoAlpha: 1 });
+
+    enterTl
       // Flash baja rápido
-      .to(flash, {
-        opacity: 0,
-        duration: 0.32,
-        ease: 'power3.out',
-      }, '-=0.02')
-      // Imagen sube con zoom-in agresivo
+      .to(flash, { autoAlpha: 0, duration: 0.38, ease: 'power3.out' })
+      // Imagen fade in + zoom out agresivo simultáneo
       .to(img, {
         autoAlpha: 1,
-        scale: 1,
-        y: 0,
-        duration: 0.85,
+        scale: 1.0,
+        duration: 1.1,
         ease: 'power4.out',
-        onStart() {
-          gsap.fromTo(flash,
-            { opacity: 0.45 },
-            { opacity: 0, duration: 0.42, ease: 'power2.out' }
-          );
-        }
-      }, '-=0.26')
-      // Micro-bounce final — sensación de peso real
-      .to(img, {
-        scale: 1.012,
-        duration: 0.16,
-        ease: 'power1.inOut',
-        yoyo: true,
-        repeat: 1,
-      }, '-=0.08')
-      .call(startGlitchLoop);
-  }
+        clearProps: 'autoAlpha',   // no dejar inline visibility bloqueando
+      }, '<0.05')
+      // Segundo pulso de flash (como el obturador de cámara)
+      .fromTo(flash,
+        { autoAlpha: 0.35 },
+        { autoAlpha: 0, duration: 0.28, ease: 'power2.out', immediateRender: false },
+        '<0.18'
+      );
 
-  // Esperar a que la imagen cargue para disparar
-  if (img.complete && img.naturalWidth) {
-    fireEntrance();
-  } else {
-    img.addEventListener('load', fireEntrance, { once: true });
-    img.addEventListener('error', () => console.warn('[LWS] liberty-icon.png no encontrado'), { once: true });
-  }
+    // ────────────────────────────────────────────────
+    //  2. CAMERA SHAKE — movimiento sutil continuo
+    //     Simula cámara de mano grabando en la calle
+    //     Usa x/y (transform aliases, GPU-only, no reflow)
+    // ────────────────────────────────────────────────
+    function shakeLoop() {
+      const xd = (Math.random() - 0.5) * 5;
+      const yd = (Math.random() - 0.5) * 3.5;
+      const sc = 1.02 + Math.random() * 0.018; // micro-zoom vivo
+      const dur = 1.8 + Math.random() * 1.4;
 
-  // ── 2. GLITCH — desplazamiento aleatorio de canales RGB ──
-  let glitchRAF = null;
-  let glitchTimeout = null;
-  let imgW = 0, imgH = 0;
-
-  function setupGlitchCanvas() {
-    if (!gc || !img.naturalWidth) return;
-    const rect = img.getBoundingClientRect();
-    imgW = rect.width;
-    imgH = rect.height;
-    gc.width  = Math.round(imgW);
-    gc.height = Math.round(imgH);
-  }
-
-  img.addEventListener('load', setupGlitchCanvas);
-  window.addEventListener('resize', setupGlitchCanvas);
-
-  function doGlitch() {
-    if (!gc || !img.complete || !img.naturalWidth) return;
-    setupGlitchCanvas();
-    if (!imgW || !imgH) return;
-
-    const ctx = gc.getContext('2d');
-    gc.style.opacity = '1';
-
-    // Número de slices (2-5)
-    const slices = 2 + Math.floor(Math.random() * 4);
-
-    ctx.clearRect(0, 0, imgW, imgH);
-
-    // Canal R — desplazado a la derecha
-    ctx.save();
-    ctx.globalCompositeOperation = 'source-over';
-    for (let i = 0; i < slices; i++) {
-      const sy = Math.random() * imgH;
-      const sh = 4 + Math.random() * (imgH * 0.06);
-      const dx = (Math.random() - 0.5) * 14;
-      ctx.drawImage(img, 0, sy, imgW, sh, dx, sy, imgW, sh);
+      gsap.to(wrap, {
+        x: xd, y: yd, scale: sc,
+        duration: dur,
+        ease: 'sine.inOut',
+        onComplete: shakeLoop,
+        overwrite: false,
+      });
     }
-    ctx.restore();
 
-    // Tinte RGB split: rojo sutil
-    ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.fillStyle = 'rgba(255,30,30,0.18)';
-    for (let i = 0; i < slices; i++) {
-      const sy = Math.random() * imgH;
-      ctx.fillRect(Math.random() * 8 - 4, sy, imgW + 8, 2 + Math.random() * 8);
+    // Iniciar shake después de que termine la entrada
+    enterTl.call(shakeLoop);
+
+    // ────────────────────────────────────────────────
+    //  3. GLITCH RGB — disparo aleatorio no bloqueante
+    //     Separa canales R y B unos px, brevísimo
+    //     requestAnimationFrame para no bloquear scroll
+    // ────────────────────────────────────────────────
+    let glitchRAF = null;
+
+    function fireGlitch() {
+      // Cancelar cualquier glitch pendiente antes de lanzar otro
+      if (glitchRAF) cancelAnimationFrame(glitchRAF);
+
+      glitchRAF = requestAnimationFrame(() => {
+        const intensity = 6 + Math.random() * 10;
+        const tl = gsap.timeline({
+          onComplete: () => { glitchRAF = null; }
+        });
+
+        // Canal R — shift derecha + tinte rojo
+        tl.set(glitchR, {
+          autoAlpha: 0.55,
+          x: intensity,
+          y: (Math.random()-0.5)*3,
+          filter: 'contrast(1.55) brightness(0.88) saturate(0) sepia(1) hue-rotate(0deg)',
+        })
+        .set(glitchB, {
+          autoAlpha: 0.45,
+          x: -intensity * 0.7,
+          y: (Math.random()-0.5)*2,
+          filter: 'contrast(1.55) brightness(0.88) saturate(0) sepia(1) hue-rotate(200deg)',
+        })
+        // Mantener brevísimo
+        .to([glitchR, glitchB], {
+          autoAlpha: 0,
+          x: 0, y: 0,
+          duration: 0.08 + Math.random() * 0.06,
+          ease: 'none',
+          stagger: 0.01,
+        });
+      });
     }
-    ctx.restore();
 
-    // Duración del glitch: muy corto (30–90ms)
-    const glitchDur = 30 + Math.random() * 60;
-    glitchRAF = setTimeout(() => {
-      ctx.clearRect(0, 0, imgW, imgH);
-      gc.style.opacity = '0';
-    }, glitchDur);
-  }
-
-  function startGlitchLoop() {
-    function scheduleNext() {
-      // Intervalo aleatorio: 1.8s - 6s
-      const delay = 1800 + Math.random() * 4200;
-      glitchTimeout = setTimeout(() => {
-        doGlitch();
-        scheduleNext();
-      }, delay);
+    // Programa el siguiente glitch con intervalo aleatorio
+    function scheduleGlitch() {
+      const nextIn = 3500 + Math.random() * 7000; // 3.5s – 10.5s entre glitches
+      setTimeout(() => {
+        fireGlitch();
+        scheduleGlitch(); // recursivo
+      }, nextIn);
     }
-    scheduleNext();
-  }
 
-  // ── 3. CAMERA WOBBLE — movimiento sutil tipo cámara a mano ──
-  // Usa gsap.ticker en lugar de rAF manual para mejor integración
-  let wobbleTime = 0;
-  let wobbleActive = false;
+    // Esperar a que termine la entrada para empezar glitches
+    enterTl.call(scheduleGlitch);
 
-  function startCameraWobble() {
-    if (wobbleActive) return;
-    wobbleActive = true;
-    gsap.ticker.add(wobbleTick);
-  }
-
-  function wobbleTick(time) {
-    if (!img) return;
-    const t  = time * 0.001; // segundos
-    // Movimiento Lissajous lento: frecuencias primas para evitar repetición obvia
-    const px = Math.sin(t * 0.31) * 1.8 + Math.sin(t * 0.73) * 0.9;
-    const py = Math.cos(t * 0.47) * 1.2 + Math.cos(t * 0.19) * 0.6;
-    // Micro-rotación de cámara
-    const rot = Math.sin(t * 0.23) * 0.28;
-
-    gsap.set(img, {
-      x: px,
-      y: py,
-      rotation: rot,
-      overwrite: false,
-    });
-  }
-
-  // Iniciar wobble cuando la imagen sea visible
-  ScrollTrigger.create({
-    trigger: '.hero',
-    start: 'top bottom',
-    end: 'bottom top',
-    onEnter:      startCameraWobble,
-    onEnterBack:  startCameraWobble,
-    onLeave:      () => { gsap.ticker.remove(wobbleTick); wobbleActive = false; },
-    onLeaveBack:  () => { gsap.ticker.remove(wobbleTick); wobbleActive = false; },
+    return () => {
+      // Cleanup cuando matchMedia cambia (buenas prácticas del skill)
+      if (glitchRAF) cancelAnimationFrame(glitchRAF);
+    };
   });
-
 })();
 
 // ══════════════════════════════════════════════════
