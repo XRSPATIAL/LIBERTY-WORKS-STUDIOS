@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
 <style>
 :root {
   --gold-primary: #b8bec8;
@@ -626,6 +626,90 @@ footer{padding:80px 72px;border-top:1px solid var(--border);display:flex;justify
 .auth-forgot a{font-family:'DM Mono',monospace;font-size:0.37rem;letter-spacing:0.14em;color:rgba(184,190,200,0.35);text-decoration:none;cursor:pointer;transition:0.3s;}
 .auth-forgot a:hover{color:var(--gold-primary);}
 
+/* ══ LIBERTY STATUE — Rockstar GTA Aesthetic ══ */
+#liberty-statue-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Imagen con filtro GTA: alto contraste, blancos crema/plata, sombras negras puras */
+#liberty-statue {
+  position: absolute;
+  bottom: 0;
+  right: 6%;
+  width: clamp(260px, 36vw, 580px);
+  height: auto;
+  transform-origin: bottom center;
+  /* Filtro GTA: contraste brutal + viñeta plata/crema */
+  filter:
+    contrast(1.85)
+    brightness(0.92)
+    saturate(0.15)
+    sepia(0.12);
+  /* Tono crema/plata en las luces: mezcla suave */
+  mix-blend-mode: normal;
+  opacity: 0;
+  will-change: transform, filter, opacity;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Pseudo-overlay para viñeta crema sobre la imagen */
+#liberty-statue-wrap::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 6%;
+  width: clamp(260px, 36vw, 580px);
+  height: 100%;
+  background: linear-gradient(
+    to top,
+    rgba(8,8,8,0.55) 0%,
+    transparent 35%,
+    transparent 75%,
+    rgba(8,8,8,0.12) 100%
+  );
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Flash de exposición blanca */
+#liberty-flash {
+  position: absolute;
+  inset: 0;
+  background: #f5f3ee;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+  mix-blend-mode: screen;
+}
+
+/* Canvas de glitch — superpuesto sobre la imagen */
+#liberty-glitch-canvas {
+  position: absolute;
+  bottom: 0;
+  right: 6%;
+  width: clamp(260px, 36vw, 580px);
+  height: 100%;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0;
+}
+
+@media(max-width:960px){
+  #liberty-statue { right: -2%; width: clamp(200px, 55vw, 340px); }
+  #liberty-statue-wrap::after { right: -2%; width: clamp(200px, 55vw, 340px); }
+  #liberty-glitch-canvas { right: -2%; width: clamp(200px, 55vw, 340px); }
+}
+@media(max-width:600px){
+  #liberty-statue { right: 50%; transform: translateX(50%); width: 72vw; }
+  #liberty-statue-wrap::after { right: 0; width: 100%; }
+  #liberty-glitch-canvas { right: 50%; transform: translateX(50%); width: 72vw; }
+}
+
 @media(max-width:960px){
   nav{padding:24px 28px;}nav.scrolled{padding:18px 28px;}
   .hero{padding:0 28px 72px;}
@@ -801,14 +885,11 @@ footer{padding:80px 72px;border-top:1px solid var(--border);display:flex;justify
 </nav>
 
 <section class="hero">
-  <!-- VIDEO de fondo (oculto por defecto, se activa desde admin) -->
-  <video id="hero-video" autoplay muted loop playsinline
-    style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;display:none;opacity:0;transition:opacity 0.8s;">
-  </video>
-  <!-- Overlay oscuro sobre el video -->
-  <div id="hero-video-overlay" style="position:absolute;inset:0;z-index:2;background:rgba(0,0,0,0.52);display:none;pointer-events:none;"></div>
-  <!-- Canvas de partículas (activo por defecto) -->
-  <canvas id="particle-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;"></canvas>
+  <div id="liberty-statue-wrap">
+    <img id="liberty-statue" src="https://raw.githubusercontent.com/libertywks/libertywks.github.io/main/liberty_icon.png" alt="Liberty Statue" draggable="false">
+    <div id="liberty-flash"></div>
+    <canvas id="liberty-glitch-canvas"></canvas>
+  </div>
   <div class="hero-edge"></div>
   <div class="hero-scan" id="hero-scan"></div>
   <div class="hero-content">
@@ -1493,33 +1574,6 @@ function cookieDecide(accepted) {
   }
 }
 
-// ── HERO MODE — video o partículas, configurable desde admin ──
-async function initHeroMode() {
-  try {
-    const { data } = await _sbAuth
-      .from('site_settings')
-      .select('hero_mode, hero_video_url')
-      .eq('id', 1)
-      .maybeSingle();
-
-    const mode     = data?.hero_mode     || 'particles';
-    const videoUrl = data?.hero_video_url || '';
-
-    if (mode === 'video' && videoUrl) {
-      const vid     = document.getElementById('hero-video');
-      const overlay = document.getElementById('hero-video-overlay');
-      const canvas  = document.getElementById('particle-canvas');
-      if (vid) {
-        vid.src = videoUrl;
-        vid.style.display = 'block';
-        vid.addEventListener('canplay', () => { vid.style.opacity = '1'; }, { once: true });
-      }
-      if (overlay) overlay.style.display = 'block';
-      if (canvas)  canvas.style.display  = 'none';
-    }
-  } catch(e) {} // sin tabla → partículas por defecto
-}
-
 // ── FRASES MÍSTICAS ──
 const phrases=['TODA HISTORIA ES UNA ESCENA DEL CRIMEN','EL SILENCIO ES EL MEJOR TESTIGO','LAS BALAS NO BORRAN LOS PECADOS','LAS PALABRAS NO PIDEN PERMISO','LA VERDAD NO TIENE AMIGOS, SOLO CÓMPLICES.','UNA PALABRA BIEN DISPARADA AHORRA UN CARGADOR.','EL PASADO NUNCA MUERE; SOLO ESPERA A QUE TE DES LA VUELTA.','LA JUSTICIA ES UN LUJO QUE NO LLEGA A ESTOS CÓDIGOS POSTALES.','EL ÉXITO ES SOLO UN ERROR DEL DESTINO.','SANGRE FRESCA SOBRE CEMENTO VIEJO.','CADA SECRETO TIENE UN PRECIO QUE NADIE QUIERE PAGAR.','EL PAPEL AGUANTA TODO; LA CALLE NO PERDONA NADA.','LAS PROMESAS SE ESCRIBEN EN ARENA Y SE COBRAN EN PLOMO.','LA INOCENCIA ES EL PRIMER GASTO INNECESARIO.','HABLAR ES GRATIS; QUE TE CREAN CUESTA LA VIDA.','EL ASFALTO ES EL ÚNICO CONFESOR QUE NO TE JUZGA.','CERO PIEDAD. CERO TESTIGOS.','LAS CICATRICES SON EL MAPA DE LO QUE INTENTASTE OLVIDAR.','NO BUSCAMOS CULPABLES, BUSCAMOS SOLUCIONES DEFINITIVAS.','EN ESTA CIUDAD, EL SOL ES UN TESTIGO QUE SE VENDE AL MEJOR POSTOR.','LA LEALTAD ES UNA DEUDA QUE SE LIQUIDA EN EFECTIVO.','EL MIEDO ES EL ÚNICO LENGUAJE QUE NO NECESITA TRADUCCIÓN.','NO HAY GLORIA EN EL BARRO, SOLO SUPERVIVENCIA.','LA NOCHE TIENE MIL OJOS Y TODOS SON DELATORES.','LA MEMORIA ES UN RASTRO DE PÓLVORA EN UN DÍA DE LLUVIA.','LOS FINALES FELICES SON PARA QUIENES PUEDEN PAGAR LA FIANZA.','NADIE ES INOCENTE DESPUÉS DE LA MEDIANOCHE.','EL SILENCIO ES EL GRITO MÁS FUERTE DE LOS QUE YA NO ESTÁN.','NO HAY PERDÓN SIN FACTURA, NI PECADO SIN RECIBO.','LA CALLE NO TE ENSEÑA A VIVIR, TE ENSEÑA A NO MORIR.','EL PODER ES UN ARMA QUE SIEMPRE APUNTA A QUIEN LA EMPUÑA.','LAS MENTIRAS BIEN DICHAS SUENAN A VERDAD BAJO LA LUZ ADECUADA.','LA MORAL ES UN ESTORBO CUANDO EL HAMBRE APRIETA EL GATILLO.','EL DESTINO NO AVISA; SIMPLEMENTE TE COBRA LA ENTRADA.','LA REDENCIÓN ES UN CUENTO QUE SE INVENTARON LOS VERDUGOS.','AQUÍ LOS SUEÑOS SE EMPEÑAN PARA PAGAR EL DESAYUNO.','CADA BALA TIENE UN NOMBRE Y CADA NOMBRE UNA CUENTA PENDIENTE.','LA CIUDAD ES UNA TRAMPA DE ACERO CON AIRE ACONDICIONADO.','EL HONOR ES UN LUJO QUE SOLO LOS MUERTOS PUEDEN PERMITIRSE.','NO PIDAS TIEMPO; EL TIEMPO ES LO ÚNICO QUE NO SE ROBA.','LAS HUELLAS DACTILARES NO CUENTAN TODA LA HISTORIA.','EL CEMENTO NO SIENTE LÁSTIMA, SOLO FRÍO.','LA AMBICIÓN ES EL CAMINO MÁS CORTO HACIA UNA FOSA COMÚN.','UNA VEZ QUE CRUZAS LA LÍNEA, LA LÍNEA ES LO ÚNICO QUE TE SOSTIENE.'];
 let pIdx = 0;
@@ -1898,11 +1952,7 @@ _sbAuth.auth.onAuthStateChange((event, session) => {
   updateNavAuth(session?.user || null);
   if (event === 'SIGNED_IN') closeAuthModal();
 });
-_sbAuth.auth.getSession().then(({ data: { session } }) => {
-  updateNavAuth(session?.user || null);
-  if (session?.user) loadUserReactions(session.user.id);
-  initHeroMode();
-});
+_sbAuth.auth.getSession().then(({ data: { session } }) => updateNavAuth(session?.user || null));
 
 window.openAuthModal = openAuthModal;
 window.handleLogout  = handleLogout;
@@ -2063,301 +2113,183 @@ function initGSAP() {
 })();
 
 // ══════════════════════════════════════════════════
-//  LIBERTY IMAGE PARTICLES — COLOR FIEL + PROFUNDIDAD
-//  Lee liberty-icon.png → píxel = partícula con su color
-//  Profundidad Z por luminosidad · 14000 partículas
-//  Sin rotación · AdditiveBlending
+//  LIBERTY STATUE — Rockstar GTA Aesthetic
+//  Entrada GSAP: zoom-in agresivo + flash exposición
+//  Efecto constante: glitch RGB + camera wobble
 // ══════════════════════════════════════════════════
-(function initImageParticles() {
-  if (typeof THREE === 'undefined') { setTimeout(initImageParticles, 80); return; }
-  if (typeof gsap  === 'undefined') { setTimeout(initImageParticles, 80); return; }
+(function initRockstarStatue() {
+  if (typeof gsap === 'undefined') { setTimeout(initRockstarStatue, 80); return; }
 
-  const heroEl = document.querySelector('.hero');
-  const cv     = document.getElementById('particle-canvas');
-  if (!cv || !heroEl) return;
+  const img    = document.getElementById('liberty-statue');
+  const flash  = document.getElementById('liberty-flash');
+  const gc     = document.getElementById('liberty-glitch-canvas');
+  if (!img) return;
 
-  const renderer = new THREE.WebGLRenderer({ canvas: cv, alpha: true, antialias: false });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.8));
-  renderer.setSize(heroEl.offsetWidth, heroEl.offsetHeight);
-  renderer.setClearColor(0x000000, 0);
+  // ── 1. ANIMACIÓN DE ENTRADA — ScrollTrigger + zoom agresivo ──
+  gsap.registerPlugin(ScrollTrigger);
 
-  const scene  = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(50, heroEl.offsetWidth / heroEl.offsetHeight, 0.1, 100);
-  camera.position.z = 4.2;
+  // Estado inicial: invisible, escalada desde abajo
+  gsap.set(img, { autoAlpha: 0, scale: 1.22, y: 40, filter: 'contrast(1.85) brightness(0.92) saturate(0.15) sepia(0.12)' });
+  gsap.set(flash, { opacity: 0 });
 
-  // ────────────────────────────────────────────────
-  //  sampleImage — muestrea píxeles y devuelve:
-  //    pos   : Float32Array N*3  (x,y,z con profundidad)
-  //    colors: Float32Array N*3  (r,g,b normalizado 0-1)
-  // ────────────────────────────────────────────────
-  function sampleImage(img, N, scale) {
-    const RES = 260; // resolución equilibrada: detalle sin ruido
-    const off = document.createElement('canvas');
-    off.width = off.height = RES;
-    const ctx = off.getContext('2d');
-    ctx.drawImage(img, 0, 0, RES, RES);
-    const px = ctx.getImageData(0, 0, RES, RES).data;
+  const entranceTL = gsap.timeline({
+    scrollTrigger: {
+      trigger: '.hero',
+      start: 'top 95%',
+      toggleActions: 'play none none none',
+      once: true,
+    }
+  });
 
-    // Recoger píxeles visibles con su color
-    const pool = [];
-    for (let y = 0; y < RES; y++) {
-      for (let x = 0; x < RES; x++) {
-        const i = (y * RES + x) * 4;
-        const r = px[i], g = px[i+1], b = px[i+2], a = px[i+3];
-        const brightness = (r + g + b) / 3;
-        if (brightness > 90 && a > 120) { // umbral alto: solo píxeles definidos, no bordes borrosos
-          pool.push({
-            x: (x / RES - 0.5) *  scale,
-            y: -(y / RES - 0.5) * scale,
-            r: r / 255, g: g / 255, b: b / 255,
-            brightness: brightness / 255
-          });
-        }
+  entranceTL
+    // Flash blanco — destello de exposición
+    .to(flash, {
+      opacity: 1,
+      duration: 0.06,
+      ease: 'none',
+    })
+    // Flash baja rápido
+    .to(flash, {
+      opacity: 0,
+      duration: 0.28,
+      ease: 'power3.out',
+    }, '-=0.02')
+    // Imagen aparece — zoom-in agresivo hacia reposo
+    .to(img, {
+      autoAlpha: 1,
+      scale: 1,
+      y: 0,
+      duration: 0.72,
+      ease: 'power4.out',
+      onStart() {
+        // Segundo destello leve al aparecer la imagen
+        gsap.fromTo(flash,
+          { opacity: 0.55 },
+          { opacity: 0, duration: 0.38, ease: 'power2.out' }
+        );
       }
-    }
+    }, '-=0.22')
+    // Micro-bounce final — sensación de peso
+    .to(img, {
+      scale: 1.018,
+      duration: 0.18,
+      ease: 'power1.inOut',
+      yoyo: true,
+      repeat: 1,
+    }, '-=0.12')
+    // Llamar glitch loop al terminar entrada
+    .call(startGlitchLoop);
 
-    if (pool.length === 0) return null;
+  // ── 2. GLITCH — desplazamiento aleatorio de canales RGB ──
+  let glitchRAF = null;
+  let glitchTimeout = null;
+  let imgW = 0, imgH = 0;
 
-    const pos    = new Float32Array(N * 3);
-    const colors = new Float32Array(N * 3);
-
-    for (let i = 0; i < N; i++) {
-      const p = pool[Math.floor(Math.random() * pool.length)];
-      // Jitter sub-píxel para aspecto orgánico
-      const jx = (Math.random()-0.5) * (scale / RES) * 0.6;
-      const jy = (Math.random()-0.5) * (scale / RES) * 0.6;
-      // PROFUNDIDAD Z: píxeles más brillantes están más al frente (z positivo)
-      // píxeles oscuros se hunden hacia atrás (z negativo)
-      // Esto crea ilusión 3D real sin geometría adicional
-      const depth = (p.brightness - 0.5) * 0.45 + (Math.random()-0.5) * 0.06;
-      pos[i*3]   = p.x + jx;
-      pos[i*3+1] = p.y + jy;
-      pos[i*3+2] = depth;
-
-      // Color fiel al píxel original
-      // Boost leve para compensar AdditiveBlending (que tiende a sobreexponer)
-      const boost = 1.0 + (1.0 - p.brightness) * 0.25;
-      colors[i*3]   = Math.min(p.r * boost, 1.0);
-      colors[i*3+1] = Math.min(p.g * boost, 1.0);
-      colors[i*3+2] = Math.min(p.b * boost, 1.0);
-    }
-    return { pos, colors };
+  function setupGlitchCanvas() {
+    if (!gc || !img.naturalWidth) return;
+    const rect = img.getBoundingClientRect();
+    imgW = rect.width;
+    imgH = rect.height;
+    gc.width  = Math.round(imgW);
+    gc.height = Math.round(imgH);
   }
 
-  // Polvo disperso para el burst — hereda colores
-  function makeStardust(N, spread, colors) {
-    const pos      = new Float32Array(N * 3);
-    const dustCols = new Float32Array(N * 3);
-    for (let i = 0; i < N; i++) {
-      const r   = Math.pow(Math.random(), 0.45) * spread;
-      const ang = Math.random() * Math.PI * 2;
-      pos[i*3]   = Math.cos(ang) * r;
-      pos[i*3+1] = Math.sin(ang) * r * 0.7;
-      pos[i*3+2] = (Math.random()-0.5) * 0.8;
-      // Mezcla el color original con blanco-azul para el polvo estelar
-      dustCols[i*3]   = 0.55 + colors[i*3]   * 0.45;
-      dustCols[i*3+1] = 0.72 + colors[i*3+1] * 0.28;
-      dustCols[i*3+2] = 1.00;
+  img.addEventListener('load', setupGlitchCanvas);
+  window.addEventListener('resize', setupGlitchCanvas);
+
+  function doGlitch() {
+    if (!gc || !img.complete || !img.naturalWidth) return;
+    setupGlitchCanvas();
+    if (!imgW || !imgH) return;
+
+    const ctx = gc.getContext('2d');
+    gc.style.opacity = '1';
+
+    // Número de slices (2-5)
+    const slices = 2 + Math.floor(Math.random() * 4);
+
+    ctx.clearRect(0, 0, imgW, imgH);
+
+    // Canal R — desplazado a la derecha
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+    for (let i = 0; i < slices; i++) {
+      const sy = Math.random() * imgH;
+      const sh = 4 + Math.random() * (imgH * 0.06);
+      const dx = (Math.random() - 0.5) * 14;
+      ctx.drawImage(img, 0, sy, imgW, sh, dx, sy, imgW, sh);
     }
-    return { pos, colors: dustCols };
+    ctx.restore();
+
+    // Tinte RGB split: rojo sutil
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = 'rgba(255,30,30,0.18)';
+    for (let i = 0; i < slices; i++) {
+      const sy = Math.random() * imgH;
+      ctx.fillRect(Math.random() * 8 - 4, sy, imgW + 8, 2 + Math.random() * 8);
+    }
+    ctx.restore();
+
+    // Duración del glitch: muy corto (30–90ms)
+    const glitchDur = 30 + Math.random() * 60;
+    glitchRAF = setTimeout(() => {
+      ctx.clearRect(0, 0, imgW, imgH);
+      gc.style.opacity = '0';
+    }, glitchDur);
   }
 
-  const N = 14000; // alta densidad
-
-  function build({ pos: figurePos, colors: figureColors }) {
-    const dust = makeStardust(N, 3.2, figureColors);
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('posA',    new THREE.BufferAttribute(figurePos.slice(), 3));
-    geometry.setAttribute('posB',    new THREE.BufferAttribute(dust.pos, 3));
-    geometry.setAttribute('colorA',  new THREE.BufferAttribute(figureColors.slice(), 3));
-    geometry.setAttribute('colorB',  new THREE.BufferAttribute(dust.colors, 3));
-    geometry.setAttribute('position',new THREE.BufferAttribute(figurePos.slice(), 3));
-
-    const seeds  = new Float32Array(N);
-    const aSizes = new Float32Array(N);
-    for (let i = 0; i < N; i++) {
-      seeds[i] = Math.random();
-      const r  = Math.random();
-      // Tamaños más variados: muchos micro + algunos brillos
-      aSizes[i] = r < 0.82 ? 0.06 + Math.random()*0.10   // microdots precisos
-                : r < 0.96 ? 0.22 + Math.random()*0.18   // medios
-                :             0.55 + Math.random()*0.7;   // destellos
+  function startGlitchLoop() {
+    function scheduleNext() {
+      // Intervalo aleatorio: 1.8s - 6s
+      const delay = 1800 + Math.random() * 4200;
+      glitchTimeout = setTimeout(() => {
+        doGlitch();
+        scheduleNext();
+      }, delay);
     }
-    geometry.setAttribute('aSeed', new THREE.BufferAttribute(seeds,  1));
-    geometry.setAttribute('aSize', new THREE.BufferAttribute(aSizes, 1));
+    scheduleNext();
+  }
 
-    const material = new THREE.ShaderMaterial({
-      transparent: true,
-      depthWrite:  false,
-      blending:    THREE.AdditiveBlending,
-      uniforms: {
-        uProgress: { value: 0.0 },
-        uTime:     { value: 0.0 },
-        uScale:    { value: renderer.getPixelRatio() * 55.0 },
-      },
+  // ── 3. CAMERA WOBBLE — movimiento sutil tipo cámara a mano ──
+  // Usa gsap.ticker en lugar de rAF manual para mejor integración
+  let wobbleTime = 0;
+  let wobbleActive = false;
 
-      vertexShader: `
-        attribute vec3  posA;
-        attribute vec3  posB;
-        attribute vec3  colorA;
-        attribute vec3  colorB;
-        attribute float aSeed;
-        attribute float aSize;
-        uniform   float uProgress;
-        uniform   float uTime;
-        uniform   float uScale;
-        varying   vec3  vColor;
-        varying   float vAlpha;
-        varying   float vSize;
-        varying   float vDepth;
+  function startCameraWobble() {
+    if (wobbleActive) return;
+    wobbleActive = true;
+    gsap.ticker.add(wobbleTick);
+  }
 
-        void main() {
-          // Power ease out: arranque rápido, frenada suave
-          float t    = uProgress;
-          float tOut = 1.0 - pow(1.0 - t, 3.2);
+  function wobbleTick(time) {
+    if (!img) return;
+    const t  = time * 0.001; // segundos
+    // Movimiento Lissajous lento: frecuencias primas para evitar repetición obvia
+    const px = Math.sin(t * 0.31) * 1.8 + Math.sin(t * 0.73) * 0.9;
+    const py = Math.cos(t * 0.47) * 1.2 + Math.cos(t * 0.19) * 0.6;
+    // Micro-rotación de cámara
+    const rot = Math.sin(t * 0.23) * 0.28;
 
-          // Micro-vibración viva — solo en reposo (t cercano a 0)
-          float restFactor = max(0.0, 1.0 - t * 4.0);
-          float vib = sin(uTime * 1.8 + aSeed * 6.28) * 0.003 * restFactor;
-          vec3 vibOff = vec3(cos(aSeed*3.14)*vib, sin(aSeed*5.1)*vib, 0.0);
-
-          vec3  pos   = mix(posA, posB, tOut) + vibOff;
-          float wave  = sin(t * 3.14159);
-
-          // Color interpolado entre figura y polvo
-          vColor = mix(colorA, colorB, tOut);
-
-          // Profundidad: partículas frontales (z>0) son más brillantes
-          float depthBoost = 1.0 + max(0.0, pos.z) * 0.55;
-          vAlpha  = (0.48 + 0.52 * (1.0 - aSeed*0.35))
-                  * (1.0 - wave * 0.5)
-                  * depthBoost;
-          vSize   = aSize;
-          vDepth  = pos.z;
-
-          vec4 mvPos   = modelViewMatrix * vec4(pos, 1.0);
-          // Perspectiva real: partículas frontales son más grandes
-          float persScale = uScale * (1.0 / -mvPos.z);
-          gl_PointSize = persScale * aSize;
-          gl_Position  = projectionMatrix * mvPos;
-        }
-      `,
-
-      fragmentShader: `
-        varying vec3  vColor;
-        varying float vAlpha;
-        varying float vSize;
-        varying float vDepth;
-
-        void main() {
-          vec2  uv   = gl_PointCoord - 0.5;
-          float dist = length(uv) * 2.0;
-          if (dist > 1.0) discard;
-
-          // Núcleo duro → halo suave
-          float core  = 1.0 - smoothstep(0.0,  0.20, dist);
-          float inner = 1.0 - smoothstep(0.15, 0.52, dist);
-          float halo  = 1.0 - smoothstep(0.28, 0.88, dist);
-          float alpha = (core*0.96 + inner*0.42 + halo*0.16) * vAlpha;
-          if (alpha < 0.003) discard;
-
-          // Color fiel: usar el color del píxel
-          // En el núcleo → más saturado y brillante
-          // En el halo   → levemente más frío (shift hacia azul para profundidad)
-          vec3  col      = vColor;
-          float cold     = smoothstep(0.3, 0.9, dist) * 0.35;
-          col = mix(col, col * vec3(0.75, 0.88, 1.0), cold);
-
-          // Destellos grandes: núcleo blanco puro para efecto óptico
-          float sparkle = step(0.7, vSize) * core * 0.65;
-          col = mix(col, vec3(1.0), sparkle);
-
-          // Partículas frontales (vDepth > 0): boost de brillo
-          float frontBoost = max(0.0, vDepth) * 0.4;
-          col = min(col + frontBoost, vec3(1.0));
-
-          gl_FragColor = vec4(col, alpha);
-        }
-      `,
-    });
-
-    const points = new THREE.Points(geometry, material);
-    scene.add(points);
-
-    // ── Ciclo: figura viva → polvo → renace ──
-    const state = { progress: 0 };
-    let cycleCount = 0;
-
-    function doCycle() {
-      cycleCount++;
-      const isBig = cycleCount % 4 === 0;
-      const scale  = isBig ? 1.0 : 0.32;
-
-      const scaledDustPos = dust.pos.slice();
-      if (!isBig) {
-        for (let i = 0; i < N; i++) {
-          const ox = figurePos[i*3], oy = figurePos[i*3+1];
-          scaledDustPos[i*3]   = ox + (dust.pos[i*3]   - ox) * scale;
-          scaledDustPos[i*3+1] = oy + (dust.pos[i*3+1] - oy) * scale;
-          scaledDustPos[i*3+2] = dust.pos[i*3+2] * scale;
-        }
-      }
-
-      geometry.getAttribute('posA').array.set(figurePos);
-      geometry.getAttribute('posB').array.set(isBig ? dust.pos : scaledDustPos);
-      geometry.getAttribute('posA').needsUpdate = true;
-      geometry.getAttribute('posB').needsUpdate = true;
-      state.progress = 0;
-
-      gsap.timeline()
-        .to(state, {
-          progress: 1,
-          duration: isBig ? 2.4 : 1.1,
-          ease: 'power2.in',
-          onUpdate: () => { material.uniforms.uProgress.value = state.progress; },
-        })
-        .to({}, { duration: isBig ? 0.45 : 0.18 })
-        .to(state, {
-          progress: 0,
-          duration: isBig ? 4.2 : 2.2,
-          ease: 'power3.out',
-          onUpdate: () => { material.uniforms.uProgress.value = state.progress; },
-          onComplete: () => {
-            setTimeout(doCycle, isBig ? 5500 : 3400);
-          },
-        });
-    }
-
-    setTimeout(doCycle, 2800);
-
-    const clock = new THREE.Clock();
-    (function animate() {
-      requestAnimationFrame(animate);
-      const t = clock.getElapsedTime();
-      material.uniforms.uTime.value = t;
-      renderer.render(scene, camera);
-    })();
-
-    window.addEventListener('resize', () => {
-      const w = heroEl.offsetWidth, h = heroEl.offsetHeight;
-      renderer.setSize(w, h);
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      material.uniforms.uScale.value = renderer.getPixelRatio() * 55.0;
+    gsap.set(img, {
+      x: px,
+      y: py,
+      rotation: rot,
+      overwrite: false,
     });
   }
 
-  // ── Cargar imagen ──
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => {
-    const result = sampleImage(img, N, 4.5);
-    if (result) build(result);
-    else console.warn('[LWS] liberty-icon.png: no pixels found');
-  };
-  img.onerror = () => console.warn('[LWS] liberty-icon.png not found');
-  img.src = 'liberty-icon.png';
+  // Iniciar wobble cuando la imagen sea visible
+  ScrollTrigger.create({
+    trigger: '.hero',
+    start: 'top bottom',
+    end: 'bottom top',
+    onEnter:      startCameraWobble,
+    onEnterBack:  startCameraWobble,
+    onLeave:      () => { gsap.ticker.remove(wobbleTick); wobbleActive = false; },
+    onLeaveBack:  () => { gsap.ticker.remove(wobbleTick); wobbleActive = false; },
+  });
+
 })();
 
 // ══════════════════════════════════════════════════
